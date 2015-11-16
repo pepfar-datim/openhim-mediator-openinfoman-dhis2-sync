@@ -1,0 +1,17 @@
+{
+  "server": {
+    "hostname": "localhost",
+    "port": 5012
+  },
+  "logger": {
+    "level": "error"
+  },
+  "openhim": {
+    "api" : {
+      "username": "root@openhim.org",
+      "password": "openhim-password",
+      "apiURL": "https://localhost:8080",
+      "trustSelfSigned": true
+    }
+  }
+}

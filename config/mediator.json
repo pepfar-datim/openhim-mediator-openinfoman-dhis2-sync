@@ -1,0 +1,92 @@
+{
+  "urn": "urn:mediator:openinfoman-dhis2-sync",
+  "version": "0.9.0",
+  "name": "OpenInfoMan-DHIS2 Sync Mediator",
+  "description": "OpenInfoMan-DHIS2 Sync Mediator",
+  "endpoints": [
+    {
+      "name": "OpenInfoMan-DHIS2 Sync Trigger",
+      "host": "localhost",
+      "port": "5012",
+      "path": "/trigger",
+      "type": "http"
+    }
+  ],
+  "defaultChannelConfig": [
+    {
+      "name": "OpenInfoMan-DHIS2 Sync",
+      "pollingSchedule" : "0 0 * * *",
+      "urlPattern": "^/_infomansync$",
+      "type": "polling",
+      "allow": ["internal"],
+      "routes": [
+        {
+          "name": "OpenInfoMan-DHIS2 Sync Trigger",
+          "host": "localhost",
+          "port": "5012",
+          "path": "/trigger",
+          "type": "http",
+          "primary": "true"
+        }
+      ]
+    }
+  ],
+  "configDefs": [
+    {
+      "param": "openinfoman-host",
+      "type": "string",
+      "displayName": "OpenInfoMan Host"
+    },
+    {
+      "param": "openinfoman-port",
+      "type": "number",
+      "displayName": "OpenInfoMan Port"
+    },
+    {
+      "param": "openinfoman-document",
+      "type": "string",
+      "displayName": "OpenInfoMan Document"
+    },
+    {
+      "param": "dhis2-host",
+      "type": "string",
+      "displayName": "DHIS2 Host"
+    },
+    {
+      "param": "dhis2-basepath",
+      "type": "string",
+      "displayName": "DHIS2 Base Path"
+    },
+    {
+      "param": "dhis2-port",
+      "type": "number",
+      "displayName": "DHIS2 Port"
+    },
+    {
+      "param": "dhis2-username",
+      "type": "string",
+      "displayName": "DHIS2 Username"
+    },
+    {
+      "param": "dhis2-password",
+      "type": "string",
+      "displayName": "DHIS2 Password"
+    },
+    {
+      "param": "lastSync",
+      "type": "string",
+      "displayName": "Last Sync"
+    }
+  ],
+  "config": {
+    "openinfoman-host": "localhost",
+    "openinfoman-port": 8984,
+    "openinfoman-document": "dhisdev",
+    "dhis2-host": "localhost",
+    "dhis2-port": 8080,
+    "dhis2-basepath": "dhis",
+    "dhis2-username": "admin",
+    "dhis2-password": "district",
+    "lastSync": "1970-01-01"
+  }
+}
