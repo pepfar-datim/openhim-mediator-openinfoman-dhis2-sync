@@ -60,7 +60,9 @@ getBasePath = ->
 
 queryDHIS2 = (req, res, lastSync, openhimTransactionID, orchestrations, callback) ->
   path = "#{getBasePath()}/api/metaData"
-  query = "assumeTrue=false&organisationUnits=true&lastUpdated=#{lastSync}"
+  # TODO for now sync entire directory - need to figure out how to do diff updates CSD-side
+  #query = "assumeTrue=false&organisationUnits=true&lastUpdated=#{lastSync}"
+  query = "assumeTrue=false&organisationUnits=true"
   url = "http://#{config.getConf().dhis2.host}:#{config.getConf().dhis2.port}#{path}?#{query}"
 
   logger.info "[#{openhimTransactionID}] Querying DHIS2 #{url}"
