@@ -5,175 +5,85 @@ config = require './config'
 
 express = require 'express'
 bodyParser = require 'body-parser'
-request = require 'request'
-moment = require 'moment'
 mediatorUtils = require 'openhim-mediator-utils'
 util = require './util'
+fs = require 'fs'
+spawn = require('child_process').spawn
 
 
-buildDHIS2Orchestration = (beforeTimestamp, path, querystring, response) ->
-  name: 'DHIS2'
-  request:
-    path: path
-    host: config.getConf().dhis2.host
-    port: config.getConf().dhis2.port
-    querystring: querystring
-    headers:
-      accept: 'application/xml'
-    method: 'GET'
-    timestamp: beforeTimestamp
-  response:
-    status: response.statusCode
-    headers: response.headers
-    body: response.body?[...10*1024] #cut off if too big
-    timestamp: new Date()
+tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync.cfg'
 
-buildInfoManOrchestration = (beforeTimestamp, path, querystring, response) ->
-  name: 'OpenInfoMan'
-  request:
-    path: path
-    host: config.getConf().openinfoman.host
-    port: config.getConf().openinfoman.port
-    querystring: querystring
-    headers:
-      accept: 'multipart/form-data'
-    method: 'POST'
-    timestamp: beforeTimestamp
-    body: 'DXF content...'
-  response:
-    status: response.statusCode
-    headers: response.headers
-    body: response.body
-    timestamp: new Date()
+falseIfEmpty = (s) -> if s? and s.trim().length>0 then s else false
 
+cfg = -> """
+########################################################################
+# Configuration Options for publish_to_ilr.sh
+########################################################################
 
-getBasePath = ->
-  _bp = config.getConf().dhis2.basepath
-  if _bp? and _bp.length > 0
-    if _bp[0] isnt '/'
-      _bp = "/#{_bp}"
-    if _bp.slice(-1) is '/'
-      _bp = _bp[0 ... -1]
-    _bp
-  else
-    ''
+ILR_URL='#{config.getConf().ilr.url}'
+ILR_USER=#{falseIfEmpty config.getConf().ilr.user}
+ILR_PASS=#{falseIfEmpty config.getConf().ilr.pass}
+ILR_DOC='#{config.getConf().ilr.doc}'
+DHIS2_URL='#{config.getConf().dhis2.url}'
+DHIS2_EXT_URL=$DHIS2_URL
+DHIS2_USER="#{falseIfEmpty config.getConf().dhis2.user}"
+DHIS2_PASS="#{falseIfEmpty config.getConf().dhis2.pass}"
+DOUSERS=#{config.getConf().dousers}
+DOSERVICES=#{config.getConf().dousers}
+IGNORECERTS=#{config.getConf().ignorecerts}
+LEVELS=#{config.getConf().levels}
+GROUPCODES=#{config.getConf().groupcodes}
+"""
 
-queryDHIS2 = (req, res, lastSync, openhimTransactionID, orchestrations, callback) ->
-  path = "#{getBasePath()}/api/metaData"
-  # TODO for now sync entire directory - need to figure out how to do diff updates CSD-side
-  #query = "assumeTrue=false&organisationUnits=true&lastUpdated=#{lastSync}"
-  query = "assumeTrue=false&organisationUnits=true"
-  url = "http://#{config.getConf().dhis2.host}:#{config.getConf().dhis2.port}#{path}?#{query}"
-
-  logger.info "[#{openhimTransactionID}] Querying DHIS2 #{url}"
-
-  options =
-    url: url
-    headers:
-      accept: 'application/xml'
-    auth:
-      user: config.getConf().dhis2.username
-      pass: config.getConf().dhis2.password
-
-  before = new Date()
-  request options, (err, httpResponse) ->
+saveConfigToFile = ->
+  cfgStr = cfg()
+  logger.debug "Config to save:\n#{cfgStr}"
+  fs.writeFile tmpCfg, cfgStr, (err) ->
     if err
-      util.handleInternalServerError res, err, orchestrations
-      return callback true
-
-    orchestrations.push buildDHIS2Orchestration before, path, query, httpResponse
-
-    if httpResponse.statusCode isnt 200
-      util.handleInternalServerError res, err, orchestrations
-      return callback true
-
-    callback null, httpResponse.body
+      logger.error err
+      process.exit 1
+    else
+      logger.debug "Saved config to #{tmpCfg}"
 
 
-_dynamicConf = {}
-
-updateSyncTime = (req, res, openhimTransactionID, orchestrations, callback) ->
-  logger.info "[#{openhimTransactionID}] Sending last sync date to core"
-
-  headers = mediatorUtils.genAuthHeaders config.getConf().openhim.api
-
-  _dynamicConf.lastSync = moment().format 'YYYY-MM-DD'
-  config.getConf().lastSync = _dynamicConf.lastSync
-
-  options =
-    url: "#{config.getConf().openhim.api.apiURL}/mediators/#{config.getMediatorConf().urn}/config"
-    headers: headers
-    json: _dynamicConf
-
-  request.put options, (err, res, body) ->
-    if err
-      util.handleInternalServerError res, err, orchestrations
-      return callback true
-
-    callback null
-
-
-sendDXFToInfoMan = (req, res, openhimTransactionID, dxf, orchestrations, callback) ->
-  path = "/CSD/csr/#{config.getConf().openinfoman.document}/careServicesRequest/urn:dhis2.org:csd:stored-function:dxf2csd/adapter/dhis2/upload"
-  url = "http://#{config.getConf().openinfoman.host}:#{config.getConf().openinfoman.port}#{path}"
-
-  logger.info "[#{openhimTransactionID}] Sending DXF update to OpenInfoMan #{url}"
-
-  options =
-    url: url
-    formData:
-      dxf:
-        options:
-          filename: 'dxf.xml'
-          contentType: 'text/xml'
-        value: dxf
-
-  before = new Date()
-  request.post options, (err, httpResponse, body) ->
-    if err
-      util.handleInternalServerError res, err, orchestrations
-      return callback true
-
-    orchestrations.push buildInfoManOrchestration before, path, null, httpResponse
-
-    if httpResponse.statusCode isnt 200 and httpResponse.statusCode isnt 302 #infoman redirects on upload
-      util.handleInternalServerError res, 'Failed to upload DXF to OpenInfoMan', orchestrations
-      return callback true
-
-    callback null
-
+buildArgs = ->
+  args = []
+  args.push "#{appRoot}/resources/publish_to_ilr.sh"
+  args.push "-c #{tmpCfg}"
+  args.push '-r' if config.getConf().reset
+  args.push '-f' if config.getConf().publishfull
+  args.push '-d' if config.getConf().debug
+  args.push '-e' if config.getConf().empty
+  return args
 
 handler = (req, res) ->
   openhimTransactionID = req.headers['x-openhim-transactionid']
-
   logger.info "[#{openhimTransactionID}] Running sync ..."
 
-  lastSync = config.getConf().lastSync
-  orchestrations = []
+  args = buildArgs()
+  script = spawn('bash', args)
+  logger.info "[#{openhimTransactionID}] Executing bash script #{args.join ' '}"
 
-  queryDHIS2 req, res, lastSync, openhimTransactionID, orchestrations, (err, dxf) ->
-    return if err
+  out = ""
+  appendToOut = (data) -> out = "#{out}#{data}"
+  script.stdout.on 'data', appendToOut
+  script.stderr.on 'data', appendToOut
 
-    sendDXFToInfoMan req, res, openhimTransactionID, dxf, orchestrations, (err) ->
-      return if err
+  script.on 'close', (code) ->
+    logger.info "[#{openhimTransactionID}] Script exited with status #{code}"
 
-      updateSyncTime req, res, openhimTransactionID, orchestrations, (err) ->
-        return if err
-
-        res.set 'Content-Type', 'application/json+openhim'
-        res.send {
-          'x-mediator-urn': config.getMediatorConf().urn
-          status: 'Successful'
-          orchestrations: orchestrations
-          response:
-            status: 200
-            headers:
-              'content-type': 'application/json'
-            body: 'done'
-            timestamp: new Date()
-        }
+    res.set 'Content-Type', 'application/json+openhim'
+    res.send {
+      'x-mediator-urn': config.getMediatorConf().urn
+      status: if code == 0 then 'Successful' else 'Failed'
+      response:
+        status: if code == 0 then 200 else 500
+        headers:
+          'content-type': 'application/json'
+        body: out
+        timestamp: new Date()
+    }
   
-
 
 # Setup express
 app = express()
@@ -192,7 +102,9 @@ if process.env.NODE_ENV isnt 'test'
   config.getConf().openhim.api.urn = config.getMediatorConf().urn
 
   mediatorUtils.registerMediator config.getConf().openhim.api, config.getMediatorConf(), (err) ->
-    return logger.error err if err
+    if err
+      logger.error err
+      process.exit 1
 
     logger.info 'Mediator has been successfully registered'
 
@@ -200,16 +112,16 @@ if process.env.NODE_ENV isnt 'test'
 
     configEmitter.on 'config', (newConfig) ->
       logger.info 'Received updated config from core'
-      _dynamicConf = newConfig
       config.updateConf newConfig
+      saveConfigToFile()
 
     configEmitter.on 'error', (err) -> logger.error err
 
     mediatorUtils.fetchConfig config.getConf().openhim.api, (err, newConfig) ->
       return logger.error err if err
       logger.info 'Received initial config from core'
-      _dynamicConf = newConfig
       config.updateConf newConfig
+      saveConfigToFile()
  
 
 exports.app = app

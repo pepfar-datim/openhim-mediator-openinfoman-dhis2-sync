@@ -1,6 +1,6 @@
 {
   "urn": "urn:mediator:openinfoman-dhis2-sync",
-  "version": "0.9.0",
+  "version": "1.0.1",
   "name": "OpenInfoMan-DHIS2 Sync Mediator",
   "description": "OpenInfoMan-DHIS2 Sync Mediator",
   "endpoints": [
@@ -33,60 +33,109 @@
   ],
   "configDefs": [
     {
-      "param": "openinfoman-host",
+      "param": "ilr-url",
       "type": "string",
-      "displayName": "OpenInfoMan Host"
+      "displayName": "ILR URL"
     },
     {
-      "param": "openinfoman-port",
-      "type": "number",
-      "displayName": "OpenInfoMan Port"
-    },
-    {
-      "param": "openinfoman-document",
+      "param": "ilr-doc",
       "type": "string",
-      "displayName": "OpenInfoMan Document"
+      "displayName": "ILR Document",
+      "description": "Name of CSD document to publish to"
     },
     {
-      "param": "dhis2-host",
+      "param": "ilr-user",
       "type": "string",
-      "displayName": "DHIS2 Host"
+      "displayName": "ILR User"
     },
     {
-      "param": "dhis2-basepath",
+      "param": "ilr-pass",
       "type": "string",
-      "displayName": "DHIS2 Base Path"
+      "displayName": "ILR Password"
     },
     {
-      "param": "dhis2-port",
-      "type": "number",
-      "displayName": "DHIS2 Port"
+      "param": "dhis2-url",
+      "type": "string",
+      "displayName": "DHIS2 URL"
     },
     {
-      "param": "dhis2-username",
+      "param": "dhis2-user",
       "type": "string",
       "displayName": "DHIS2 Username"
     },
     {
-      "param": "dhis2-password",
+      "param": "dhis2-pass",
       "type": "string",
       "displayName": "DHIS2 Password"
     },
     {
-      "param": "lastSync",
+      "param": "dousers",
+      "type": "bool",
+      "displayName": "DHIS2 Users as Health Workers",
+      "description": "Process DHIS2 Users are Health workers"
+    },
+    {
+      "param": "doservices",
+      "type": "bool",
+      "displayName": "DHIS2 Data Elements as Services",
+      "description": "Process DHIS2 Data Elements as services"
+    },
+    {
+      "param": "ignorecerts",
+      "type": "bool",
+      "displayName": "Ignore Certs",
+      "description": "Ignore certificate checks"
+    },
+    {
+      "param": "levels",
       "type": "string",
-      "displayName": "Last Sync"
+      "displayName": "Levels",
+      "description": "Levels of a facility. Example: LEVELS=(3 4 5)"
+    },
+    {
+      "param": "groupcodes",
+      "type": "string",
+      "displayName": "Group Codes",
+      "description": "Groups codes. Example: GROUPS=(COMMUNITY FACILITY COUNTRY)"
+    },
+    {
+      "param": "reset",
+      "type": "bool",
+      "displayName": "Reset Last Exported Time",
+      "description": "Reset the last exported time"
+    },
+    {
+      "param": "publishfull",
+      "type": "bool",
+      "displayName": "Publish Full DHIS2 Metadata",
+      "description": "Publish the full DHIS2 metadata (ignore the last exported time)"
+    },
+    {
+      "param": "debug",
+      "type": "bool",
+      "displayName": "Debug mode"
+    },
+    {
+      "param": "empty",
+      "type": "bool",
+      "displayName": "Empty CSD Document",
+      "description": "Empty the CSD document before publishing"
     }
   ],
   "config": {
-    "openinfoman-host": "localhost",
-    "openinfoman-port": 8984,
-    "openinfoman-document": "dhisdev",
-    "dhis2-host": "localhost",
-    "dhis2-port": 8080,
-    "dhis2-basepath": "dhis",
-    "dhis2-username": "admin",
-    "dhis2-password": "district",
-    "lastSync": "1970-01-01"
+    "ilr-url": "http://localhost:8984/CSD",
+    "ilr-doc": "test",
+    "dhis2-url": "https://localhost/dhis2",
+    "dhis2-user": "admin",
+    "dhis2-pass": "district",
+    "dousers": true,
+    "doservices": true,
+    "ignorecerts": true,
+    "levels": "(4 5 6)",
+    "groupcodes": "( )",
+    "reset": false,
+    "publishfull": false,
+    "debug": false,
+    "empty": false
   }
 }
