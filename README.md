@@ -18,6 +18,12 @@ node lib/server.js -c myConfig.json
 
 See `config/default.json` for a config example. This config only contains the basic mediator settings - all other settings can be configured on the OpenHIM Console via the Mediators page.
 
+## Development
+To run in development mode
+```
+grunt serve
+```
+
 ## See also
 * http://openhim.org/
 * https://github.com/openhie/openinfoman
