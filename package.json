@@ -1,6 +1,6 @@
 {
   "name": "openhim-mediator-openinfoman-dhis2-sync",
-  "version": "0.9.0",
+  "version": "1.0.1",
   "description": "OpenInfoMan-DHIS2 Sync Mediator",
   "scripts": {
     "prepublish": "grunt build",
