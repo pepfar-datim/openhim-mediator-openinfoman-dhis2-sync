@@ -21,23 +21,7 @@ confFile = null
 
 
 # Update the conf map with updated values
-# Keys that contain dashes will be split and nested in the map,
-# e.g. if the updated config is { "server-host": "localhost" }
-# then the conf map will end up as {"server":{ "host": "localhost"}}
-#
-# TODO the split should be on period, not dash. but mongo doesn't like these
-# https://github.com/jembi/openhim-core-js/issues/566
-updateConf = (config) ->
-  for param of config
-    _spl = param.split '-'
-    _confI = conf
-
-    for key, i in _spl
-      if i is _spl.length-1
-        _confI[key] = config[param]
-      else
-        if not _confI[key] then _confI[key] = {}
-        _confI = _confI[key]
+updateConf = (config) -> conf[param] = config[param] for param of config
 
 
 load = () ->

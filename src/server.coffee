@@ -9,6 +9,7 @@ mediatorUtils = require 'openhim-mediator-utils'
 util = require './util'
 fs = require 'fs'
 spawn = require('child_process').spawn
+request = require 'request'
 
 
 tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync.cfg'
@@ -20,19 +21,19 @@ cfg = -> """
 # Configuration Options for publish_to_ilr.sh
 ########################################################################
 
-ILR_URL='#{config.getConf().ilr.url}'
-ILR_USER=#{falseIfEmpty config.getConf().ilr.user}
-ILR_PASS=#{falseIfEmpty config.getConf().ilr.pass}
-ILR_DOC='#{config.getConf().ilr.doc}'
-DHIS2_URL='#{config.getConf().dhis2.url}'
+ILR_URL='#{config.getConf()['dhis-to-ilr']['ilr-url']}'
+ILR_USER=#{falseIfEmpty config.getConf()['dhis-to-ilr']['ilr-user']}
+ILR_PASS=#{falseIfEmpty config.getConf()['dhis-to-ilr']['ilr-pass']}
+ILR_DOC='#{config.getConf()['dhis-to-ilr']['ilr-doc']}'
+DHIS2_URL='#{config.getConf()['dhis-to-ilr']['dhis2-url']}'
 DHIS2_EXT_URL=$DHIS2_URL
-DHIS2_USER="#{falseIfEmpty config.getConf().dhis2.user}"
-DHIS2_PASS="#{falseIfEmpty config.getConf().dhis2.pass}"
-DOUSERS=#{config.getConf().dousers}
-DOSERVICES=#{config.getConf().dousers}
-IGNORECERTS=#{config.getConf().ignorecerts}
-LEVELS=#{config.getConf().levels}
-GROUPCODES=#{config.getConf().groupcodes}
+DHIS2_USER="#{falseIfEmpty config.getConf()['dhis-to-ilr']['dhis2-user']}"
+DHIS2_PASS="#{falseIfEmpty config.getConf()['dhis-to-ilr']['dhis2-pass']}"
+DOUSERS=#{config.getConf()['dhis-to-ilr']['dousers']}
+DOSERVICES=#{config.getConf()['dhis-to-ilr']['dousers']}
+IGNORECERTS=#{config.getConf()['dhis-to-ilr']['ignorecerts']}
+LEVELS=#{config.getConf()['dhis-to-ilr']['levels']}
+GROUPCODES=#{config.getConf()['dhis-to-ilr']['groupcodes']}
 """
 
 saveConfigToFile = ->
@@ -50,39 +51,122 @@ buildArgs = ->
   args = []
   args.push "#{appRoot}/resources/publish_to_ilr.sh"
   args.push "-c #{tmpCfg}"
-  args.push '-r' if config.getConf().reset
-  args.push '-f' if config.getConf().publishfull
-  args.push '-d' if config.getConf().debug
-  args.push '-e' if config.getConf().empty
+  args.push '-r' if config.getConf()['dhis-to-ilr']['reset']
+  args.push '-f' if config.getConf()['dhis-to-ilr']['publishfull']
+  args.push '-d' if config.getConf()['dhis-to-ilr']['debug']
+  args.push '-e' if config.getConf()['dhis-to-ilr']['empty']
   return args
+
+dhisToIlr = (out, callback) ->
+  out.info "Running dhis-to-ilr ..."
+  args = buildArgs()
+  script = spawn('bash', args)
+  out.info "Executing bash script #{args.join ' '}"
+
+  script.stdout.on 'data', out.info
+  script.stderr.on 'data', out.error
+
+  script.on 'close', (code) ->
+    out.info "Script exited with status #{code}"
+    callback code is 0
+
+
+bothTrigger = (out, callback) ->
+  nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
+  options =
+    url: config.getConf()['sync-type']['both-trigger-url']
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    timeout: 0
+
+  out.info "Triggering #{options.url} ..."
+
+  beforeTimestamp = new Date()
+  request.get options, (err, res, body) ->
+    if err
+      out.error "Trigger failed: #{err}"
+      return callback false
+
+    out.pushOrchestration
+      name: 'Trigger'
+      request:
+        path: options.url
+        method: 'GET'
+        timestamp: beforeTimestamp
+      response:
+        status: res.statusCode
+        headers: res.headers
+        body: body
+        timestamp: new Date()
+
+    out.info "Response: [#{res.statusCode}] #{body}"
+    if 200 <= res.statusCode <= 399
+      callback true
+    else
+      out.error 'Trigger failed'
+      callback false
+
+
+ilrToDhis = (out, callback) ->
+  # TODO
+  callback()
 
 handler = (req, res) ->
   openhimTransactionID = req.headers['x-openhim-transactionid']
-  logger.info "[#{openhimTransactionID}] Running sync ..."
 
-  args = buildArgs()
-  script = spawn('bash', args)
-  logger.info "[#{openhimTransactionID}] Executing bash script #{args.join ' '}"
+  _out = ->
+    body = ""
+    orchestrations = []
 
-  out = ""
-  appendToOut = (data) -> out = "#{out}#{data}"
-  script.stdout.on 'data', appendToOut
-  script.stderr.on 'data', appendToOut
+    append = (level, data) ->
+      logger[level]("[#{openhimTransactionID}] #{data}")
+      if data[-1..] isnt '\n'
+        body = "#{body}#{data}\n"
+      else
+        body = "#{body}#{data}"
 
-  script.on 'close', (code) ->
-    logger.info "[#{openhimTransactionID}] Script exited with status #{code}"
+    return {
+      body: -> body
+      info: (data) -> append 'info', data
+      error: (data) -> append 'error', data
+      pushOrchestration: (o) -> orchestrations.push o
+      orchestrations: -> orchestrations
+    }
+  out = _out()
 
+  out.info "Running sync with mode #{config.getConf()['sync-type']['mode']} ..."
+
+  end = (successful) ->
     res.set 'Content-Type', 'application/json+openhim'
     res.send {
       'x-mediator-urn': config.getMediatorConf().urn
-      status: if code == 0 then 'Successful' else 'Failed'
+      status: if successful then 'Successful' else 'Failed'
       response:
-        status: if code == 0 then 200 else 500
+        status: if successful then 200 else 500
         headers:
           'content-type': 'application/json'
-        body: out
+        body: out.body()
         timestamp: new Date()
+      orchestrations: out.orchestrations()
     }
+
+  if config.getConf()['sync-type']['mode'] is 'DHIS2 to ILR'
+    dhisToIlr out, end
+  else if config.getConf()['sync-type']['mode'] is 'ILR to DHIS2'
+    ilrToDhis out, end
+  else
+    dhisToIlr out, (successful) ->
+      if not successful then return end false
+
+      next = ->
+        ilrToDhis out, end
+      if config.getConf()['sync-type']['both-trigger-enabled']
+        bothTrigger out, (successful) ->
+          if not successful then return end false
+          next()
+      else
+        next()
   
 
 # Setup express
@@ -124,4 +208,6 @@ if process.env.NODE_ENV isnt 'test'
       saveConfigToFile()
  
 
-exports.app = app
+if process.env.NODE_ENV is 'test'
+  exports.app = app
+  exports.bothTrigger = bothTrigger
