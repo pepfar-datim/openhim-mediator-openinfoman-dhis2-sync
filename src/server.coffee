@@ -78,6 +78,7 @@ bothTrigger = (out, callback) ->
     cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
     key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    timeout: 0
 
   out.info "Triggering #{options.url} ..."
 
@@ -146,7 +147,7 @@ handler = (req, res) ->
           'content-type': 'application/json'
         body: out.body()
         timestamp: new Date()
-      orchestrations: orchestrations
+      orchestrations: out.orchestrations()
     }
 
   if config.getConf()['sync-type']['mode'] is 'DHIS2 to ILR'
