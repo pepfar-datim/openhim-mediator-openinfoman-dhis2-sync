@@ -56,31 +56,49 @@ buildArgs = ->
   args.push '-e' if config.getConf()['dhis-to-ilr']['empty']
   return args
 
-handler = (req, res) ->
-  openhimTransactionID = req.headers['x-openhim-transactionid']
-  logger.info "[#{openhimTransactionID}] Running sync ..."
-
+dhisToIlr = (out, callback) ->
+  out.info "Running dhis-to-ilr ..."
   args = buildArgs()
   script = spawn('bash', args)
-  logger.info "[#{openhimTransactionID}] Executing bash script #{args.join ' '}"
+  out.info "Executing bash script #{args.join ' '}"
 
-  out = ""
-  appendToOut = (data) -> out = "#{out}#{data}"
-  script.stdout.on 'data', appendToOut
-  script.stderr.on 'data', appendToOut
+  script.stdout.on 'data', out.info
+  script.stderr.on 'data', out.error
 
   script.on 'close', (code) ->
-    logger.info "[#{openhimTransactionID}] Script exited with status #{code}"
+    out.info "Script exited with status #{code}"
+    callback null
 
+handler = (req, res) ->
+  openhimTransactionID = req.headers['x-openhim-transactionid']
+
+  _out = ->
+    body = ""
+    append = (level, data) ->
+      logger[level]("[#{openhimTransactionID}] #{data}")
+      if data[-1..] isnt '\n'
+        body = "#{body}#{data}\n"
+      else
+        body = "#{body}#{data}"
+    return {
+      body: -> body
+      info: (data) -> append 'info', data
+      error: (data) -> append 'error', data
+    }
+  out = _out()
+
+  out.info "Running sync with mode #{config.getConf()['sync-type']['mode']} ..."
+
+  dhisToIlr out, (err) ->
     res.set 'Content-Type', 'application/json+openhim'
     res.send {
       'x-mediator-urn': config.getMediatorConf().urn
-      status: if code == 0 then 'Successful' else 'Failed'
+      status: if err then 'Failed' else 'Successful'
       response:
-        status: if code == 0 then 200 else 500
+        status: if err then 500 else 200
         headers:
           'content-type': 'application/json'
-        body: out
+        body: out.body()
         timestamp: new Date()
     }
   
