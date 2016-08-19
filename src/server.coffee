@@ -9,6 +9,7 @@ mediatorUtils = require 'openhim-mediator-utils'
 util = require './util'
 fs = require 'fs'
 spawn = require('child_process').spawn
+request = require 'request'
 
 
 tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync.cfg'
@@ -69,9 +70,28 @@ dhisToIlr = (out, callback) ->
     out.info "Script exited with status #{code}"
     callback code is 0
 
+
 bothTrigger = (out, callback) ->
-  # TODO
-  callback()
+  nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
+  options =
+    url: config.getConf()['sync-type']['both-trigger-url']
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+
+  out.info "Triggering #{options.url} ..."
+
+  request.get options, (err, res, body) ->
+    if err
+      out.error "Trigger failed: #{err}"
+      return callback false
+
+    out.info "Response: [#{res.statusCode}] #{body}"
+    if res.statusCode isnt 200
+      out.error 'Trigger failed'
+
+    callback res.statusCode is 200
+
 
 ilrToDhis = (out, callback) ->
   # TODO
@@ -167,4 +187,6 @@ if process.env.NODE_ENV isnt 'test'
       saveConfigToFile()
  
 
-exports.app = app
+if process.env.NODE_ENV is 'test'
+  exports.app = app
+  exports.bothTrigger = bothTrigger
