@@ -51,6 +51,7 @@ describe 'Trigger test', ->
     out =
       info: (data) -> logger.info data
       error: (data) -> logger.error data
+      pushOrchestration: (o) -> logger.info o
     server.bothTrigger out, (successful) ->
       successful.should.be.exactly true
       targetCalled.should.be.exactly true
@@ -61,7 +62,23 @@ describe 'Trigger test', ->
     out =
       info: (data) -> logger.info data
       error: (data) -> logger.info "[this is expected] #{data}"
+      pushOrchestration: (o) -> logger.info o
     server.bothTrigger out, (successful) ->
       successful.should.be.exactly false
       errorTargetCalled.should.be.exactly true
+      done()
+
+  it 'should create an orchestration', (done) ->
+    config.getConf()['sync-type']['both-trigger-url'] = 'https://localhost:7123/ILR/CSD/pollService/directory/DATIM-OU-TZ/update_cache'
+    orch = []
+    out =
+      info: (data) -> logger.info data
+      error: (data) -> logger.error data
+      pushOrchestration: (o) -> orch.push o
+    server.bothTrigger out, (successful) ->
+      orch.length.should.be.exactly 1
+      orch[0].name.should.be.exactly 'Trigger'
+      orch[0].request.path.should.be.exactly config.getConf()['sync-type']['both-trigger-url']
+      orch[0].response.status.should.be.exactly 200
+      orch[0].response.body.should.be.exactly 'OK'
       done()

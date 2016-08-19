@@ -154,7 +154,7 @@
           "param": "both-trigger-enabled",
           "type": "bool",
           "displayName": "Both Mode Trigger",
-          "description": "If enabled, a URL that needs to be triggered in between running the DHIS-to-ILR and ILR-to-DHIS processes"
+          "description": "If enabled, a target trigger URL will be called in between running the DHIS-to-ILR and ILR-to-DHIS processes"
         },
         {
           "param": "both-trigger-url",

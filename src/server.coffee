@@ -81,10 +81,23 @@ bothTrigger = (out, callback) ->
 
   out.info "Triggering #{options.url} ..."
 
+  beforeTimestamp = new Date()
   request.get options, (err, res, body) ->
     if err
       out.error "Trigger failed: #{err}"
       return callback false
+
+    out.pushOrchestration
+      name: 'Trigger'
+      request:
+        path: options.url
+        method: 'GET'
+        timestamp: beforeTimestamp
+      response:
+        status: res.statusCode
+        headers: res.headers
+        body: body
+        timestamp: new Date()
 
     out.info "Response: [#{res.statusCode}] #{body}"
     if res.statusCode isnt 200
@@ -102,16 +115,21 @@ handler = (req, res) ->
 
   _out = ->
     body = ""
+    orchestrations = []
+
     append = (level, data) ->
       logger[level]("[#{openhimTransactionID}] #{data}")
       if data[-1..] isnt '\n'
         body = "#{body}#{data}\n"
       else
         body = "#{body}#{data}"
+
     return {
       body: -> body
       info: (data) -> append 'info', data
       error: (data) -> append 'error', data
+      pushOrchestration: (o) -> orchestrations.push o
+      orchestrations: -> orchestrations
     }
   out = _out()
 
@@ -128,6 +146,7 @@ handler = (req, res) ->
           'content-type': 'application/json'
         body: out.body()
         timestamp: new Date()
+      orchestrations: orchestrations
     }
 
   if config.getConf()['sync-type']['mode'] is 'DHIS2 to ILR'
