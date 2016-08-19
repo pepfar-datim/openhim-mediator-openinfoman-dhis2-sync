@@ -101,10 +101,11 @@ bothTrigger = (out, callback) ->
         timestamp: new Date()
 
     out.info "Response: [#{res.statusCode}] #{body}"
-    if res.statusCode isnt 200
+    if 200 <= res.statusCode <= 399
+      callback true
+    else
       out.error 'Trigger failed'
-
-    callback res.statusCode is 200
+      callback false
 
 
 ilrToDhis = (out, callback) ->
