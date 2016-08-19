@@ -20,19 +20,19 @@ cfg = -> """
 # Configuration Options for publish_to_ilr.sh
 ########################################################################
 
-ILR_URL='#{config.getConf().ilr.url}'
-ILR_USER=#{falseIfEmpty config.getConf().ilr.user}
-ILR_PASS=#{falseIfEmpty config.getConf().ilr.pass}
-ILR_DOC='#{config.getConf().ilr.doc}'
-DHIS2_URL='#{config.getConf().dhis2.url}'
+ILR_URL='#{config.getConf()['dhis-to-ilr']['ilr-url']}'
+ILR_USER=#{falseIfEmpty config.getConf()['dhis-to-ilr']['ilr-user']}
+ILR_PASS=#{falseIfEmpty config.getConf()['dhis-to-ilr']['ilr-pass']}
+ILR_DOC='#{config.getConf()['dhis-to-ilr']['ilr-doc']}'
+DHIS2_URL='#{config.getConf()['dhis-to-ilr']['dhis2-url']}'
 DHIS2_EXT_URL=$DHIS2_URL
-DHIS2_USER="#{falseIfEmpty config.getConf().dhis2.user}"
-DHIS2_PASS="#{falseIfEmpty config.getConf().dhis2.pass}"
-DOUSERS=#{config.getConf().dousers}
-DOSERVICES=#{config.getConf().dousers}
-IGNORECERTS=#{config.getConf().ignorecerts}
-LEVELS=#{config.getConf().levels}
-GROUPCODES=#{config.getConf().groupcodes}
+DHIS2_USER="#{falseIfEmpty config.getConf()['dhis-to-ilr']['dhis2-user']}"
+DHIS2_PASS="#{falseIfEmpty config.getConf()['dhis-to-ilr']['dhis2-pass']}"
+DOUSERS=#{config.getConf()['dhis-to-ilr']['dousers']}
+DOSERVICES=#{config.getConf()['dhis-to-ilr']['dousers']}
+IGNORECERTS=#{config.getConf()['dhis-to-ilr']['ignorecerts']}
+LEVELS=#{config.getConf()['dhis-to-ilr']['levels']}
+GROUPCODES=#{config.getConf()['dhis-to-ilr']['groupcodes']}
 """
 
 saveConfigToFile = ->
@@ -50,10 +50,10 @@ buildArgs = ->
   args = []
   args.push "#{appRoot}/resources/publish_to_ilr.sh"
   args.push "-c #{tmpCfg}"
-  args.push '-r' if config.getConf().reset
-  args.push '-f' if config.getConf().publishfull
-  args.push '-d' if config.getConf().debug
-  args.push '-e' if config.getConf().empty
+  args.push '-r' if config.getConf()['dhis-to-ilr']['reset']
+  args.push '-f' if config.getConf()['dhis-to-ilr']['publishfull']
+  args.push '-d' if config.getConf()['dhis-to-ilr']['debug']
+  args.push '-e' if config.getConf()['dhis-to-ilr']['empty']
   return args
 
 handler = (req, res) ->
