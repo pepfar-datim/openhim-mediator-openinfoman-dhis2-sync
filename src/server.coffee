@@ -67,7 +67,15 @@ dhisToIlr = (out, callback) ->
 
   script.on 'close', (code) ->
     out.info "Script exited with status #{code}"
-    callback null
+    callback code is 0
+
+bothTrigger = (out, callback) ->
+  # TODO
+  callback()
+
+ilrToDhis = (out, callback) ->
+  # TODO
+  callback()
 
 handler = (req, res) ->
   openhimTransactionID = req.headers['x-openhim-transactionid']
@@ -89,18 +97,35 @@ handler = (req, res) ->
 
   out.info "Running sync with mode #{config.getConf()['sync-type']['mode']} ..."
 
-  dhisToIlr out, (err) ->
+  end = (successful) ->
     res.set 'Content-Type', 'application/json+openhim'
     res.send {
       'x-mediator-urn': config.getMediatorConf().urn
-      status: if err then 'Failed' else 'Successful'
+      status: if successful then 'Successful' else 'Failed'
       response:
-        status: if err then 500 else 200
+        status: if successful then 200 else 500
         headers:
           'content-type': 'application/json'
         body: out.body()
         timestamp: new Date()
     }
+
+  if config.getConf()['sync-type']['mode'] is 'DHIS2 to ILR'
+    dhisToIlr out, end
+  else if config.getConf()['sync-type']['mode'] is 'ILR to DHIS2'
+    ilrToDhis out, end
+  else
+    dhisToIlr out, (successful) ->
+      if not successful then return end false
+
+      next = ->
+        ilrToDhis out, end
+      if config.getConf()['sync-type']['both-trigger-enabled']
+        bothTrigger out, (successful) ->
+          if not successful then return end false
+          next()
+      else
+        next()
   
 
 # Setup express
