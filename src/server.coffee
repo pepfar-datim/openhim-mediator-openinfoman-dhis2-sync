@@ -15,6 +15,7 @@ request = require 'request'
 tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync.cfg'
 
 falseIfEmpty = (s) -> if s? and s.trim().length>0 then s else false
+nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
 
 cfg = -> """
 ########################################################################
@@ -56,8 +57,6 @@ buildArgs = ->
   args.push '-d' if config.getConf()['dhis-to-ilr']['debug']
   args.push '-e' if config.getConf()['dhis-to-ilr']['empty']
   return args
-
-nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
 
 dhisToIlr = (out, callback) ->
   out.info "Running dhis-to-ilr ..."
@@ -109,18 +108,50 @@ bothTrigger = (out, callback) ->
       callback false
 
 
-ilrToDhis = (out, callback) ->
-  # TODO
+# Fetch DXF from ILR (openinfoman)
+fetchDXFFromIlr = (out, callback) ->
+  ilrOptions =
+    url: "#{config.getConf()['ilr-to-dhis']['ilr-url']}/csr/#{config.getConf()['ilr-to-dhis']['ilr-doc']}/careServicesRequest/urn:dhis.org:transform_to_dxf:#{config.getConf()['ilr-to-dhis']['dhis2-version']}"
+    encoding: null
+    body: """<csd:requestParams xmlns:csd='urn:ihe:iti:csd:2013'>
+              <processUsers value='0'/>
+              <preserveUUIDs value='1'/>
+            </csd:requestParams>"""
+    headers:
+      'Content-Type': 'text/xml'
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
 
-  # get dxfData to import from ILR
-  # TODO - Get dxfData from ILR request
-  dxfData = null
-  postToDhis out, dxfData, (result) ->
-    if result
-      callback true
-    else
-      out.error 'POST to DHIS2 failed'
-      callback false
+  if config.getConf()['ilr-to-dhis']['ilr-user'] and config.getConf()['ilr-to-dhis']['ilr-pass']
+    ilrOptions.auth =
+      user: config.getConf()['ilr-to-dhis']['ilr-user']
+      pass: config.getConf()['ilr-to-dhis']['ilr-pass']
+
+  out.info "Fetching DXF from ILR #{ilrOptions.url} ..."
+  beforeTimestamp = new Date()
+  ilrReq = request.post ilrOptions, (err, res, body) ->
+    if err
+      out.error "POST to ILR failed: #{err.stack}"
+      return callback err
+    if res.statusCode isnt 200
+      out.error "ILR stored query failed with response code #{res.statusCode} and body: #{body}"
+      return callback new Error "Returned non-200 response code: #{body}"
+
+    out.pushOrchestration
+      name: 'Extract DXF from ILR'
+      request:
+        path: ilrOptions.url
+        method: 'POST'
+        timestamp: beforeTimestamp
+      response:
+        status: res.statusCode
+        headers: res.headers
+        body: body
+        timestamp: new Date()
+
+    callback null, body
+
 
 # post DXF data to DHIS2 api
 postToDhis = (out, dxfData, callback) ->
@@ -163,6 +194,17 @@ postToDhis = (out, dxfData, callback) ->
     else
       out.error 'Post to DHIS2 failed'
       callback false
+
+
+ilrToDhis = (out, callback) ->
+  fetchDXFFromIlr out, (err, dxf) ->
+    if err then return callback err
+    postToDhis out, dxf, (result) ->
+      if result
+        callback true
+      else
+        out.error 'POST to DHIS2 failed'
+        callback false
 
 
 handler = (req, res) ->
@@ -220,7 +262,7 @@ handler = (req, res) ->
           next()
       else
         next()
-  
+
 
 # Setup express
 app = express()
@@ -259,9 +301,10 @@ if process.env.NODE_ENV isnt 'test'
       logger.info 'Received initial config from core'
       config.updateConf newConfig
       saveConfigToFile()
- 
+
 
 if process.env.NODE_ENV is 'test'
   exports.app = app
   exports.bothTrigger = bothTrigger
   exports.postToDhis = postToDhis
+  exports.fetchDXFFromIlr = fetchDXFFromIlr

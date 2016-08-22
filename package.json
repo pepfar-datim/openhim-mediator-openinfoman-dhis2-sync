@@ -4,7 +4,8 @@
   "description": "OpenInfoMan-DHIS2 Sync Mediator",
   "scripts": {
     "prepublish": "grunt build",
-    "test": "grunt test"
+    "test": "grunt test",
+    "start": "node lib/server.js"
   },
   "private": true,
   "dependencies": {
@@ -12,7 +13,7 @@
     "express": "^4.10.8",
     "moment": "^2.10.6",
     "openhim-mediator-utils": "^0.2.2",
-    "request": "^2.65.0",
+    "request": "^2.74.0",
     "source-map-support": "^0.2.10",
     "stdio": "^0.2.7",
     "winston": "^0.9.0"
@@ -29,7 +30,7 @@
     "grunt-env": "^0.4.4",
     "grunt-express-server": "~0.5.1",
     "grunt-mocha-cli": "~1.13.0",
-    "should": "~5.0.0",
+    "should": "~11.1.0",
     "supertest": "~0.15.0"
   }
 }

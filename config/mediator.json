@@ -170,6 +170,12 @@
           "param": "dhis2-pass",
           "type": "string",
           "displayName": "DHIS2 Password"
+        },
+        {
+          "param": "dhis2-version",
+          "type": "string",
+          "displayName": "DHIS2 version",
+          "description": "The version of DHIS to export data for. This is used to call the correct stored query in the ILR for the correct DHIS2 version."
         }
       ]
     },
@@ -237,7 +243,8 @@
       "ilr-doc": "test",
       "dhis2-url": "https://localhost/dhis2",
       "dhis2-user": "admin",
-      "dhis2-pass": "district"
+      "dhis2-pass": "district",
+      "dhis2-version": "v2.19"
     },
     "sync-type": {
       "mode": "DHIS2 to ILR",
