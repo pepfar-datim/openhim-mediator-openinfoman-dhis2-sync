@@ -58,8 +58,6 @@ buildArgs = ->
   args.push '-e' if config.getConf()['dhis-to-ilr']['empty']
   return args
 
-nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
-
 dhisToIlr = (out, callback) ->
   out.info "Running dhis-to-ilr ..."
   args = buildArgs()
