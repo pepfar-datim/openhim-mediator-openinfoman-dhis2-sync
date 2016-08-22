@@ -125,6 +125,11 @@ fetchDXFFromIlr = (out, callback) ->
     key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
 
+  if config.getConf()['ilr-to-dhis']['ilr-user'] and config.getConf()['ilr-to-dhis']['ilr-pass']
+    ilrOptions.auth =
+      user: config.getConf()['ilr-to-dhis']['ilr-user']
+      pass: config.getConf()['ilr-to-dhis']['ilr-pass']
+
   out.info "Fetching DXF from ILR #{ilrOptions.url} ..."
   beforeTimestamp = new Date()
   ilrReq = request.post ilrOptions, (err, res, body) ->

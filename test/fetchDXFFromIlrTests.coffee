@@ -9,6 +9,7 @@ server = require '../lib/server'
 describe 'fetchDXFFromIlr()', ->
   target = null
   targetCalled = false
+  authPresent = false
 
   errorTarget = null
   errorTargetCalled = false
@@ -36,6 +37,7 @@ describe 'fetchDXFFromIlr()', ->
 
     target = https.createServer options, (req, res) ->
       targetCalled = true
+      authPresent = req.headers.authorization?
       res.writeHead 200, {'Content-Type': 'text/plain'}
       res.end 'DXF'
     errorTarget = https.createServer options, (req, res) ->
@@ -50,6 +52,7 @@ describe 'fetchDXFFromIlr()', ->
   beforeEach (done) ->
     targetCalled = false
     errorTargetCalled = false
+    authPresent = false
     orchestrations = []
 
     done()
@@ -86,4 +89,13 @@ describe 'fetchDXFFromIlr()', ->
       should.not.exist err
       orchestrations.length.should.be.exactly 1
       orchestrations[0].name.should.be.exactly 'Extract DXF from ILR'
+      done()
+
+  it 'should add basic auth if ilr auth config present', (done) ->
+    config.getConf()['ilr-to-dhis']['ilr-url'] = 'https://localhost:7125/ILR/CSD'
+    config.getConf()['ilr-to-dhis']['ilr-user'] = 'user'
+    config.getConf()['ilr-to-dhis']['ilr-pass'] = 'pass'
+    server.fetchDXFFromIlr out, (err, dxf) ->
+      should.not.exist err
+      authPresent.should.be.true()
       done()
