@@ -1,0 +1,18 @@
+<metaData xmlns="http://dhis2.org/schema/dxf/2.0" created="2016-08-22T06:40:07.431+0000">
+  <organisationUnits>
+    <organisationUnit code="01080100" name="Facility Test" created="2015-05-15T12:59:19.438+0000" lastUpdated="2016-06-13T13:16:33.695+0000" shortName="Facility Test" uuid="015c1fd4-961e-4c39-8067-c3499a577b56" level="4" id="PUF3Ao62oMs">
+      <externalAccess>false</externalAccess>
+      <user name="admin admin" created="2013-07-16T18:10:53.167+0000" lastUpdated="2016-02-04T09:56:18.768+0000" id="ZRiVuGhA92W">
+        <externalAccess>false</externalAccess>
+      </user>
+      <parent code="010801" name="Parent Facility Test" created="2013-07-18T20:43:07.014+0000" lastUpdated="2016-02-15T07:58:40.620+0000" id="NG0NW7T1bzX">
+        <externalAccess>false</externalAccess>
+        <user name="admin admin" created="2013-07-16T18:10:53.167+0000" lastUpdated="2016-02-04T09:56:18.768+0000" id="ZRiVuGhA92W">
+          <externalAccess>false</externalAccess>
+        </user>
+      </parent>
+      <path>/hTE4Lj52fNq/KS7RmayDERP/NG0NW7T1bzX/PUF3Ao62oMs</path>
+      <openingDate>2009-12-31</openingDate>
+    </organisationUnit>
+  </organisationUnits>
+</metaData>
