@@ -146,7 +146,7 @@ postToDhis = (out, dxfData, callback) ->
       return callback false
 
     out.pushOrchestration
-      name: 'DHIS2 OrgUnit Import'
+      name: 'DHIS2 Import'
       request:
         path: options.url
         method: 'POST'
