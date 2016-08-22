@@ -57,6 +57,8 @@ buildArgs = ->
   args.push '-e' if config.getConf()['dhis-to-ilr']['empty']
   return args
 
+nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
+
 dhisToIlr = (out, callback) ->
   out.info "Running dhis-to-ilr ..."
   args = buildArgs()
@@ -72,7 +74,6 @@ dhisToIlr = (out, callback) ->
 
 
 bothTrigger = (out, callback) ->
-  nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
   options =
     url: config.getConf()['sync-type']['both-trigger-url']
     cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
@@ -110,7 +111,59 @@ bothTrigger = (out, callback) ->
 
 ilrToDhis = (out, callback) ->
   # TODO
-  callback()
+
+  # get dxfData to import from ILR
+  # TODO - Get dxfData from ILR request
+  dxfData = null
+  postToDhis out, dxfData, (result) ->
+    if result
+      callback true
+    else
+      out.error 'POST to DHIS2 failed'
+      callback false
+
+# post DXF data to DHIS2 api
+postToDhis = (out, dxfData, callback) ->
+  if not dxfData
+    out.info "No DXF body supplied"
+    return callback false
+
+  options =
+    url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/metadata.xml'
+    data: dxfData
+    auth:
+      username: config.getConf()['ilr-to-dhis']['dhis2-user']
+      password: config.getConf()['ilr-to-dhis']['dhis2-pass']
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    timeout: 0
+
+  beforeTimestamp = new Date()
+  request.post options, (err, res, body) ->
+    if err
+      out.error "Post to DHIS2 failed: #{err}"
+      return callback false
+
+    out.pushOrchestration
+      name: 'DHIS2 Import'
+      request:
+        path: options.url
+        method: 'POST'
+        timestamp: beforeTimestamp
+      response:
+        status: res.statusCode
+        headers: res.headers
+        body: body
+        timestamp: new Date()
+
+    out.info "Response: [#{res.statusCode}] #{body}"
+    if 200 <= res.statusCode <= 399
+      callback true
+    else
+      out.error 'Post to DHIS2 failed'
+      callback false
+
 
 handler = (req, res) ->
   openhimTransactionID = req.headers['x-openhim-transactionid']
@@ -211,3 +264,4 @@ if process.env.NODE_ENV isnt 'test'
 if process.env.NODE_ENV is 'test'
   exports.app = app
   exports.bothTrigger = bothTrigger
+  exports.postToDhis = postToDhis
