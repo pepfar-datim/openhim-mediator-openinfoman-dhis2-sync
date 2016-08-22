@@ -126,9 +126,26 @@ fetchDXFFromIlr = (out, callback) ->
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
 
   out.info "Fetching DXF from ILR #{ilrOptions.url} ..."
+  beforeTimestamp = new Date()
   ilrReq = request.post ilrOptions, (err, res, body) ->
-    if err then return callback err
-    if res.statusCode isnt 200 then return callback new Error "Returned non-200 response code: #{body}"
+    if err
+      out.error "POST to ILR failed: #{err.stack}"
+      return callback err
+    if res.statusCode isnt 200
+      out.error "ILR stored query failed with response code #{res.statusCode} and body: #{body}"
+      return callback new Error "Returned non-200 response code: #{body}"
+
+    out.pushOrchestration
+      name: 'Extract DXF from ILR'
+      request:
+        path: ilrOptions.url
+        method: 'POST'
+        timestamp: beforeTimestamp
+      response:
+        status: res.statusCode
+        headers: res.headers
+        body: body
+        timestamp: new Date()
 
     callback null, body
 
