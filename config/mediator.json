@@ -197,6 +197,9 @@
       "empty": false
     },
     "ilr-to-dhis": {
+      "ilr-url": "http://localhost:8984/CSD",
+      "ilr-doc": "test",
+      "dhis2-version": "v2.19"
     },
     "sync-type": {
       "mode": "DHIS2 to ILR",

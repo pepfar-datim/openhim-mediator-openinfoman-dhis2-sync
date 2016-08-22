@@ -15,6 +15,7 @@ request = require 'request'
 tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync.cfg'
 
 falseIfEmpty = (s) -> if s? and s.trim().length>0 then s else false
+nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
 
 cfg = -> """
 ########################################################################
@@ -72,7 +73,6 @@ dhisToIlr = (out, callback) ->
 
 
 bothTrigger = (out, callback) ->
-  nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
   options =
     url: config.getConf()['sync-type']['both-trigger-url']
     cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
@@ -108,9 +108,35 @@ bothTrigger = (out, callback) ->
       callback false
 
 
+fetchDXFFromIlr = (out, callback) ->
+  ilrOptions =
+    url: "#{config.getConf()['ilr-to-dhis']['ilr-url']}/csr/#{config.getConf()['ilr-to-dhis']['ilr-doc']}/careServicesRequest/urn:dhis.org:transform_to_dxf:#{config.getConf()['ilr-to-dhis']['dhis2-version']}"
+    encoding: null
+    body: """<csd:requestParams xmlns:csd='urn:ihe:iti:csd:2013'>
+              <processUsers value='0'/>
+              <preserveUUIDs value='1'/>
+            </csd:requestParams>"""
+    headers:
+      'Content-Type': 'text/xml'
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+
+  out.info "Fetching DXF from ILR #{ilrOptions.url} ..."
+  ilrReq = request.post ilrOptions, (err, res, body) ->
+    if err then return callback err
+    if res.statusCode isnt 200 then return callback new Error "Returned non-200 response code: #{body}"
+
+    console.log res.statusCode, body.toString()
+
+    callback null, body
+
+
 ilrToDhis = (out, callback) ->
-  # TODO
-  callback()
+  fetchDXFFromIlr out, (err, dxf) ->
+    if err then return callback err
+
+    callback()
 
 handler = (req, res) ->
   openhimTransactionID = req.headers['x-openhim-transactionid']
@@ -167,7 +193,7 @@ handler = (req, res) ->
           next()
       else
         next()
-  
+
 
 # Setup express
 app = express()
@@ -206,8 +232,9 @@ if process.env.NODE_ENV isnt 'test'
       logger.info 'Received initial config from core'
       config.updateConf newConfig
       saveConfigToFile()
- 
+
 
 if process.env.NODE_ENV is 'test'
   exports.app = app
   exports.bothTrigger = bothTrigger
+  exports.fetchDXFFromIlr = fetchDXFFromIlr
