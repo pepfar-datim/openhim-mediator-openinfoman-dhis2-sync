@@ -127,8 +127,6 @@ fetchDXFFromIlr = (out, callback) ->
     if err then return callback err
     if res.statusCode isnt 200 then return callback new Error "Returned non-200 response code: #{body}"
 
-    console.log res.statusCode, body.toString()
-
     callback null, body
 
 
