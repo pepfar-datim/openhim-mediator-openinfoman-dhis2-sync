@@ -198,7 +198,7 @@ postToDhis = (out, dxfData, callback) ->
 
 ilrToDhis = (out, callback) ->
   fetchDXFFromIlr out, (err, dxf) ->
-    if err then return callback err
+    if err then return callback false
     postToDhis out, dxf, (result) ->
       if result
         callback true
