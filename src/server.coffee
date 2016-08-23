@@ -176,7 +176,7 @@ postToDhis = (out, dxfData, callback) ->
 
   options =
     url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/metadata.xml'
-    data: dxfData
+    body: dxfData
     auth:
       username: config.getConf()['ilr-to-dhis']['dhis2-user']
       password: config.getConf()['ilr-to-dhis']['dhis2-pass']
