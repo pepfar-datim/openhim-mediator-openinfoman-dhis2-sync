@@ -61,14 +61,29 @@ buildArgs = ->
 dhisToIlr = (out, callback) ->
   out.info "Running dhis-to-ilr ..."
   args = buildArgs()
+  beforeTimestamp = new Date()
   script = spawn('bash', args)
   out.info "Executing bash script #{args.join ' '}"
 
+  logs = ""
   script.stdout.on 'data', out.info
+  script.stdout.on 'data', (data) -> logs += data.toString() + '\n'
   script.stderr.on 'data', out.error
+  script.stderr.on 'data', (data) -> logs += data.toString() + '\n'
 
   script.on 'close', (code) ->
     out.info "Script exited with status #{code}"
+    logs += "Script exited with status #{code}"
+
+    out.pushOrchestration
+      name: 'Execute Publish_to_ilr.sh'
+      request:
+        timestamp: beforeTimestamp
+      response:
+        status: code
+        body: logs
+        timestamp: new Date()
+
     callback code is 0
 
 
