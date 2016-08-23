@@ -135,6 +135,48 @@
       "displayName": "ILR to DHIS2 Synchronization",
       "description": "Setup for the ILR to DHIS2 Synchronization mode",
       "template": [
+        {
+          "param": "ilr-url",
+          "type": "string",
+          "displayName": "ILR URL"
+        },
+        {
+          "param": "ilr-doc",
+          "type": "string",
+          "displayName": "ILR Document",
+          "description": "Name of CSD document to publish to"
+        },
+        {
+          "param": "ilr-user",
+          "type": "string",
+          "displayName": "ILR User"
+        },
+        {
+          "param": "ilr-pass",
+          "type": "string",
+          "displayName": "ILR Password"
+        },
+        {
+          "param": "dhis2-url",
+          "type": "string",
+          "displayName": "DHIS2 URL"
+        },
+        {
+          "param": "dhis2-user",
+          "type": "string",
+          "displayName": "DHIS2 Username"
+        },
+        {
+          "param": "dhis2-pass",
+          "type": "string",
+          "displayName": "DHIS2 Password"
+        },
+        {
+          "param": "dhis2-version",
+          "type": "string",
+          "displayName": "DHIS2 version",
+          "description": "The version of DHIS to export data for. This is used to call the correct stored query in the ILR for the correct DHIS2 version."
+        }
       ]
     },
     {
@@ -197,6 +239,12 @@
       "empty": false
     },
     "ilr-to-dhis": {
+      "ilr-url": "http://localhost:8984/CSD",
+      "ilr-doc": "test",
+      "dhis2-url": "https://localhost/dhis2",
+      "dhis2-user": "admin",
+      "dhis2-pass": "district",
+      "dhis2-version": "v2.19"
     },
     "sync-type": {
       "mode": "DHIS2 to ILR",
