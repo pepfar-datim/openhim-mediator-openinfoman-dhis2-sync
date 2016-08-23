@@ -175,7 +175,7 @@ postToDhis = (out, dxfData, callback) ->
     return callback false
 
   options =
-    url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/metadata.xml'
+    url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/metadata'
     body: dxfData
     auth:
       username: config.getConf()['ilr-to-dhis']['dhis2-user']
@@ -184,6 +184,7 @@ postToDhis = (out, dxfData, callback) ->
     key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
     timeout: 0
+    headers: { 'content-type': 'application/xml' }
 
   beforeTimestamp = new Date()
   request.post options, (err, res, body) ->
