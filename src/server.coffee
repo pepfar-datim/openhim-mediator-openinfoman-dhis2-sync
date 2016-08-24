@@ -127,7 +127,6 @@ bothTrigger = (out, callback) ->
 fetchDXFFromIlr = (out, callback) ->
   ilrOptions =
     url: "#{config.getConf()['ilr-to-dhis']['ilr-url']}/csr/#{config.getConf()['ilr-to-dhis']['ilr-doc']}/careServicesRequest/urn:dhis.org:transform_to_dxf:#{config.getConf()['ilr-to-dhis']['dhis2-version']}"
-    encoding: null
     body: """<csd:requestParams xmlns:csd='urn:ihe:iti:csd:2013'>
               <processUsers value='0'/>
               <preserveUUIDs value='1'/>
@@ -177,6 +176,7 @@ postToDhis = (out, dxfData, callback) ->
   options =
     url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/metadata'
     body: dxfData
+    method: 'POST'
     auth:
       username: config.getConf()['ilr-to-dhis']['dhis2-user']
       password: config.getConf()['ilr-to-dhis']['dhis2-pass']
@@ -196,7 +196,8 @@ postToDhis = (out, dxfData, callback) ->
       name: 'DHIS2 Import'
       request:
         path: options.url
-        method: 'POST'
+        method: options.method
+        body: options.body
         timestamp: beforeTimestamp
       response:
         status: res.statusCode
