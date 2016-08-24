@@ -291,7 +291,7 @@ app.get '/trigger', handler
 
 server = app.listen config.getConf().server.port, config.getConf().server.hostname, ->
   logger.info "[#{process.env.NODE_ENV}] #{config.getMediatorConf().name} running on port #{server.address().address}:#{server.address().port}"
-
+server.timeout = 0
 
 if process.env.NODE_ENV isnt 'test'
   logger.info 'Attempting to register mediator with core ...'
