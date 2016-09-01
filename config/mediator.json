@@ -1,6 +1,6 @@
 {
   "urn": "urn:mediator:openinfoman-dhis2-sync",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "name": "OpenInfoMan-DHIS2 Sync Mediator",
   "description": "OpenInfoMan-DHIS2 Sync Mediator",
   "endpoints": [

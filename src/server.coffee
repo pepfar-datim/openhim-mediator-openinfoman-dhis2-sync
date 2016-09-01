@@ -130,6 +130,7 @@ fetchDXFFromIlr = (out, callback) ->
     body: """<csd:requestParams xmlns:csd='urn:ihe:iti:csd:2013'>
               <processUsers value='0'/>
               <preserveUUIDs value='1'/>
+              <zip value='0'/>
             </csd:requestParams>"""
     headers:
       'Content-Type': 'text/xml'
