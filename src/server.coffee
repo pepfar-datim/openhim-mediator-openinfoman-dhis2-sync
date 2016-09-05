@@ -213,6 +213,91 @@ postToDhis = (out, dxfData, callback) ->
       out.error 'Post to DHIS2 failed'
       callback false
 
+# Poll DHIS2 task, period and timeout are in ms, default to 1s and 2hrs respectively
+pollTask = (out, task, period = 1000, timeout = 7200000, callback) ->
+  pollNum = 0
+  beforeTimestamp = new Date()
+  interval = setInterval () ->
+    options =
+      url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/system/tasks/' + task
+      auth:
+        username: config.getConf()['ilr-to-dhis']['dhis2-user']
+        password: config.getConf()['ilr-to-dhis']['dhis2-pass']
+      cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+      key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+      ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+      json: true
+    request.get options, (err, res, tasks) ->
+      if err
+        clearInterval interval
+        return callback err
+      if res.statusCode isnt 200
+        clearInterval interval
+        return callback new Error "Incorrect status code recieved, #{res.statusCode}"
+      pollNum++
+      if tasks[0].completed
+        clearInterval interval
+
+        out.pushOrchestration
+          name: "Polled DHIS resource rebuild task #{pollNum} times"
+          request:
+            path: options.url
+            method: options.method
+            body: options.body
+            timestamp: beforeTimestamp
+          response:
+            status: res.statusCode
+            headers: res.headers
+            body: JSON.stringify(tasks)
+            timestamp: new Date()
+
+        return callback()
+      if pollNum * period >= timeout
+        clearInterval interval
+        return callback new Error "Polled tasks endpoint #{pollNum} time and still not completed, timing out..."
+  , period
+
+# initiate a resource table rebuild task on DHIS and wait for the task to complete
+rebuildDHIS2resourceTable = (out, callback) ->
+  options =
+    url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/resourceTables'
+    method: 'POST'
+    auth:
+      username: config.getConf()['ilr-to-dhis']['dhis2-user']
+      password: config.getConf()['ilr-to-dhis']['dhis2-pass']
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+
+  beforeTimestamp = new Date()
+  request.post options, (err, res, body) ->
+    if err
+      out.error "Resource tables refresh in DHIS2 failed: #{err}"
+      return callback err
+
+    out.pushOrchestration
+      name: 'DHIS2 resource table refresh'
+      request:
+        path: options.url
+        method: options.method
+        body: options.body
+        timestamp: beforeTimestamp
+      response:
+        status: res.statusCode
+        headers: res.headers
+        body: body
+        timestamp: new Date()
+
+    out.info "Response: [#{res.statusCode}] #{body}"
+    if res.statusCode is 200
+      pollTask out, 'RESOURCETABLE_UPDATE', null, null, (err) ->
+        if err then return callback err
+
+        return callback()
+    else
+      out.error "Resource tables refresh in DHIS2 failed, statusCode: #{res.statusCode}"
+      callback new Error "Resource tables refresh in DHIS2 failed, statusCode: #{res.statusCode}"
+
 
 ilrToDhis = (out, callback) ->
   fetchDXFFromIlr out, (err, dxf) ->
@@ -326,3 +411,5 @@ if process.env.NODE_ENV is 'test'
   exports.bothTrigger = bothTrigger
   exports.postToDhis = postToDhis
   exports.fetchDXFFromIlr = fetchDXFFromIlr
+  exports.pollTask = pollTask
+  exports.rebuildDHIS2resourceTable = rebuildDHIS2resourceTable
