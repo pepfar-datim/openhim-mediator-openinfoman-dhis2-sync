@@ -235,7 +235,9 @@ pollTask = (out, task, period = 1000, timeout = 7200000, callback) ->
         clearInterval interval
         return callback new Error "Incorrect status code recieved, #{res.statusCode}"
       pollNum++
-      if tasks[0].completed
+      if not tasks[0]?.completed?
+        return callback new Error 'No tasks returned or bad tasks response recieved'
+      if tasks[0]?.completed is true
         clearInterval interval
 
         out.pushOrchestration
@@ -374,37 +376,46 @@ app.use bodyParser.json()
 
 app.get '/trigger', handler
 
+server = null
+exports.start = (callback) ->
+  server = app.listen config.getConf().server.port, config.getConf().server.hostname, ->
+    logger.info "[#{process.env.NODE_ENV}] #{config.getMediatorConf().name} running on port #{server.address().address}:#{server.address().port}"
+    if callback then callback null, server
+  server.on 'error', (err) ->
+    if callback then callback err
+  server.timeout = 0
 
-server = app.listen config.getConf().server.port, config.getConf().server.hostname, ->
-  logger.info "[#{process.env.NODE_ENV}] #{config.getMediatorConf().name} running on port #{server.address().address}:#{server.address().port}"
-server.timeout = 0
+  if process.env.NODE_ENV isnt 'test'
+    logger.info 'Attempting to register mediator with core ...'
+    config.getConf().openhim.api.urn = config.getMediatorConf().urn
 
-if process.env.NODE_ENV isnt 'test'
-  logger.info 'Attempting to register mediator with core ...'
-  config.getConf().openhim.api.urn = config.getMediatorConf().urn
+    mediatorUtils.registerMediator config.getConf().openhim.api, config.getMediatorConf(), (err) ->
+      if err
+        logger.error err
+        process.exit 1
 
-  mediatorUtils.registerMediator config.getConf().openhim.api, config.getMediatorConf(), (err) ->
-    if err
-      logger.error err
-      process.exit 1
+      logger.info 'Mediator has been successfully registered'
 
-    logger.info 'Mediator has been successfully registered'
+      configEmitter = mediatorUtils.activateHeartbeat config.getConf().openhim.api
 
-    configEmitter = mediatorUtils.activateHeartbeat config.getConf().openhim.api
+      configEmitter.on 'config', (newConfig) ->
+        logger.info 'Received updated config from core'
+        config.updateConf newConfig
+        saveConfigToFile()
 
-    configEmitter.on 'config', (newConfig) ->
-      logger.info 'Received updated config from core'
-      config.updateConf newConfig
-      saveConfigToFile()
+      configEmitter.on 'error', (err) -> logger.error err
 
-    configEmitter.on 'error', (err) -> logger.error err
+      mediatorUtils.fetchConfig config.getConf().openhim.api, (err, newConfig) ->
+        return logger.error err if err
+        logger.info 'Received initial config from core'
+        config.updateConf newConfig
+        saveConfigToFile()
 
-    mediatorUtils.fetchConfig config.getConf().openhim.api, (err, newConfig) ->
-      return logger.error err if err
-      logger.info 'Received initial config from core'
-      config.updateConf newConfig
-      saveConfigToFile()
+exports.stop = (callback) ->
+  server.close ->
+    if callback then callback()
 
+if not module.parent then exports.start()
 
 if process.env.NODE_ENV is 'test'
   exports.app = app

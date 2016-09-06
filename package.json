@@ -5,7 +5,7 @@
   "scripts": {
     "prepublish": "grunt build",
     "test": "grunt test",
-    "start": "node lib/server.js"
+    "start": "grunt build && node lib/server.js"
   },
   "private": true,
   "dependencies": {
@@ -30,7 +30,9 @@
     "grunt-env": "^0.4.4",
     "grunt-express-server": "~0.5.1",
     "grunt-mocha-cli": "~1.13.0",
+    "rewire": "^2.5.2",
     "should": "~11.1.0",
+    "sinon": "^1.17.5",
     "supertest": "~0.15.0"
   }
 }
