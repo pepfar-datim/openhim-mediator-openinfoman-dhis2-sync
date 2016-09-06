@@ -213,8 +213,8 @@ postToDhis = (out, dxfData, callback) ->
       out.error 'Post to DHIS2 failed'
       callback false
 
-# Poll DHIS2 task, period and timeout are in ms, default to 1s and 2hrs respectively
-pollTask = (out, task, period = 1000, timeout = 7200000, callback) ->
+# Poll DHIS2 task, period and timeout are in ms
+pollTask = (out, task, period, timeout, callback) ->
   pollNum = 0
   beforeTimestamp = new Date()
   interval = setInterval () ->
@@ -292,7 +292,9 @@ rebuildDHIS2resourceTable = (out, callback) ->
 
     out.info "Response: [#{res.statusCode}] #{body}"
     if res.statusCode is 200
-      pollTask out, 'RESOURCETABLE_UPDATE', null, null, (err) ->
+      period = config.getConf()['ilr-to-dhis']['dhis2-poll-period']
+      timeout = config.getConf()['ilr-to-dhis']['dhis2-poll-timeout']
+      pollTask out, 'RESOURCETABLE_UPDATE', period, timeout, (err) ->
         if err then return callback err
 
         return callback()

@@ -88,11 +88,17 @@ describe 'Rebuild DHIS2 resource table', ->
 
       done()
 
+    after (done) ->
+      target.close ->
+        errorTarget.close ->
+          done()
+
     it 'should poll tasks until completed is returned', (done) ->
       config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:7130'
       server.pollTask out, 'RESOURCETABLE_UPDATE', 10, 50, (err) ->
         should.not.exist err
         timesTargetCalled.should.be.exactly 4
+        authPresent.should.be.true()
         done()
 
     it 'should return an error if something goes wrong querying tasks', (done) ->
@@ -149,11 +155,11 @@ describe 'Rebuild DHIS2 resource table', ->
       target = https.createServer options, (req, res) ->
         targetCalled = true
         authPresent = req.headers.authorization?
-        res.writeHead 200, {'Content-Type': 'text/plain'}
+        res.writeHead 200, {'Content-Type': 'application/json'}
         res.end()
       errorTarget = https.createServer options, (req, res) ->
         errorTargetCalled = true
-        res.writeHead 500, {'Content-Type': 'text/plain'}
+        res.writeHead 500, {'Content-Type': 'application/json'}
         res.end()
 
       target.listen 8543, (err) ->
@@ -176,10 +182,17 @@ describe 'Rebuild DHIS2 resource table', ->
     afterEach ->
       server.__set__('pollTask', origPollTaskFunc)
 
+    after (done) ->
+      target.close ->
+        errorTarget.close ->
+          done()
+
     it 'should callback when a 200 response is recieved', (done) ->
       config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:8543'
       server.rebuildDHIS2resourceTable out, (err) ->
         should.not.exist err
+        targetCalled.should.be.true()
+        authPresent.should.be.true()
         done()
 
     it 'should return an error when a NON 200 response is recieved', (done) ->
@@ -187,6 +200,7 @@ describe 'Rebuild DHIS2 resource table', ->
       server.rebuildDHIS2resourceTable out, (err) ->
         should.exist err
         err.message.should.be.exactly 'Resource tables refresh in DHIS2 failed, statusCode: 500'
+        errorTargetCalled.should.be.true()
         done()
 
     it 'should add an orchestration', (done) ->
