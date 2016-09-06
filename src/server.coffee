@@ -308,9 +308,10 @@ ilrToDhis = (out, callback) ->
     if err then return callback false
     postToDhis out, dxf, (result) ->
       if result
-        callback true
+        rebuildDHIS2resourceTable out, (err) ->
+          if err then return callback false
+          callback true
       else
-        out.error 'POST to DHIS2 failed'
         callback false
 
 
