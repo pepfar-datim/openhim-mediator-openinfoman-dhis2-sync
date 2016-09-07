@@ -5,7 +5,7 @@
   "scripts": {
     "prepublish": "grunt build",
     "test": "grunt test",
-    "start": "grunt build && node lib/server.js"
+    "start": "node lib/server.js"
   },
   "private": true,
   "dependencies": {
