@@ -1,6 +1,6 @@
 {
   "urn": "urn:mediator:openinfoman-dhis2-sync",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "name": "OpenInfoMan-DHIS2 Sync Mediator",
   "description": "OpenInfoMan-DHIS2 Sync Mediator",
   "endpoints": [
@@ -186,8 +186,14 @@
         {
           "param": "dhis2-poll-timeout",
           "type": "number",
-          "displayName": "DHIS2 taks polling timeout (ms)",
+          "displayName": "DHIS2 task polling timeout (ms)",
           "description": "The timeout after which to stop polling the DHIS2 API and return an error."
+        },
+        {
+          "param": "dhis2-rebuild-resources",
+          "type": "bool",
+          "displayName": "DHIS2 enable resource rebuild",
+          "description": "If this is enabled then the DHIS2 resource table will be rebuilt after data is imported into DHIS2."
         }
       ]
     },
@@ -258,7 +264,8 @@
       "dhis2-pass": "district",
       "dhis2-version": "v2.19",
       "dhis2-poll-period": "1000",
-      "dhis2-poll-timeout": "7200000"
+      "dhis2-poll-timeout": "7200000",
+      "dhis2-rebuild-resources": false
     },
     "sync-type": {
       "mode": "DHIS2 to ILR",
