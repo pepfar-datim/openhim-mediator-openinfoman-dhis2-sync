@@ -308,8 +308,11 @@ ilrToDhis = (out, callback) ->
     if err then return callback false
     postToDhis out, dxf, (result) ->
       if result
-        rebuildDHIS2resourceTable out, (err) ->
-          if err then return callback false
+        if config.getConf()['ilr-to-dhis']['dhis2-rebuild-resources']
+          rebuildDHIS2resourceTable out, (err) ->
+            if err then return callback false
+            callback true
+        else
           callback true
       else
         callback false
