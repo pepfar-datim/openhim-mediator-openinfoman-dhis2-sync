@@ -122,50 +122,114 @@ bothTrigger = (out, callback) ->
       out.error 'Trigger failed'
       callback false
 
+setDHISDataStore = (namespace, key, data, update, callback) ->
+  options =
+    url: config.getConf()['ilr-to-dhis']['dhis2-url'] + "/api/dataStore/#{namespace}/#{key}"
+    body: data
+    auth:
+      username: config.getConf()['ilr-to-dhis']['dhis2-user']
+      password: config.getConf()['ilr-to-dhis']['dhis2-pass']
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    json: true
+
+  if update
+    options.method = 'PUT'
+  else
+    options.method = 'POST'
+
+  request options, (err, res, body) ->
+    if err
+      return callback err
+    else if (res.statusCode isnt 201 and not update) or (res.statusCode isnt 200 and update)
+      return callback new Error "Set value in datastore failed: [status #{res.statusCode}] #{JSON.stringify(body)}"
+    else
+      return callback null, body
+
+
+getDHISDataStore = (namespace, key, callback) ->
+  options =
+    url: config.getConf()['ilr-to-dhis']['dhis2-url'] + "/api/dataStore/#{namespace}/#{key}"
+    auth:
+      username: config.getConf()['ilr-to-dhis']['dhis2-user']
+      password: config.getConf()['ilr-to-dhis']['dhis2-pass']
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    json: true
+
+  request.get options, (err, res, body) ->
+    if err
+      return callback err
+    else if res.statusCode isnt 200
+      return callback new Error "Get value in datastore failed: [status #{res.statusCode}] #{JSON.stringify(body)}"
+    else
+      return callback null, body
+
+# Fetch last import timestamp
+fetchLastImportTs = (callback) ->
+  getDHISDataStore 'CSD-Loader-Last-Import', config.getConf()['ilr-to-dhis']['ilr-doc'], (err, data) ->
+    console.log err
+    if err
+      logger.info 'Could not find last updated timestamp, creating one.'
+      date = new Date(0)
+      setDHISDataStore 'CSD-Loader-Last-Import', config.getConf()['ilr-to-dhis']['ilr-doc'], value: date, false, (err) ->
+        if err then return callback new Error "Could not write last export to DHIS2 datastore #{err.stack}"
+        callback null, date
+    else
+      callback null, data.value
 
 # Fetch DXF from ILR (openinfoman)
 fetchDXFFromIlr = (out, callback) ->
-  ilrOptions =
-    url: "#{config.getConf()['ilr-to-dhis']['ilr-url']}/csr/#{config.getConf()['ilr-to-dhis']['ilr-doc']}/careServicesRequest/urn:dhis.org:transform_to_dxf:#{config.getConf()['ilr-to-dhis']['dhis2-version']}"
-    body: """<csd:requestParams xmlns:csd='urn:ihe:iti:csd:2013'>
-              <processUsers value='0'/>
-              <preserveUUIDs value='1'/>
-              <zip value='0'/>
-            </csd:requestParams>"""
-    headers:
-      'Content-Type': 'text/xml'
-    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
-    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
-    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+  fetchLastImportTs (err, lastImport) ->
+    if err then return callback err
 
-  if config.getConf()['ilr-to-dhis']['ilr-user'] and config.getConf()['ilr-to-dhis']['ilr-pass']
-    ilrOptions.auth =
-      user: config.getConf()['ilr-to-dhis']['ilr-user']
-      pass: config.getConf()['ilr-to-dhis']['ilr-pass']
+    ilrOptions =
+      url: "#{config.getConf()['ilr-to-dhis']['ilr-url']}/csr/#{config.getConf()['ilr-to-dhis']['ilr-doc']}/careServicesRequest/urn:dhis.org:transform_to_dxf:#{config.getConf()['ilr-to-dhis']['dhis2-version']}"
+      body: """<csd:requestParams xmlns:csd='urn:ihe:iti:csd:2013'>
+                <processUsers value='0'/>
+                <preserveUUIDs value='1'/>
+                <zip value='0'/>
+                <onlyDirectChildren value='0'/>
+                <csd:record updated='#{lastImport}'/>
+              </csd:requestParams>"""
+      headers:
+        'Content-Type': 'text/xml'
+      cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+      key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+      ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
 
-  out.info "Fetching DXF from ILR #{ilrOptions.url} ..."
-  beforeTimestamp = new Date()
-  ilrReq = request.post ilrOptions, (err, res, body) ->
-    if err
-      out.error "POST to ILR failed: #{err.stack}"
-      return callback err
-    if res.statusCode isnt 200
-      out.error "ILR stored query failed with response code #{res.statusCode} and body: #{body}"
-      return callback new Error "Returned non-200 response code: #{body}"
+    if config.getConf()['ilr-to-dhis']['ilr-user'] and config.getConf()['ilr-to-dhis']['ilr-pass']
+      ilrOptions.auth =
+        user: config.getConf()['ilr-to-dhis']['ilr-user']
+        pass: config.getConf()['ilr-to-dhis']['ilr-pass']
 
-    out.pushOrchestration
-      name: 'Extract DXF from ILR'
-      request:
-        path: ilrOptions.url
-        method: 'POST'
-        timestamp: beforeTimestamp
-      response:
-        status: res.statusCode
-        headers: res.headers
-        body: body
-        timestamp: new Date()
+    out.info "Fetching DXF from ILR #{ilrOptions.url} ..."
+    beforeTimestamp = new Date()
+    ilrReq = request.post ilrOptions, (err, res, body) ->
+      if err
+        out.error "POST to ILR failed: #{err.stack}"
+        return callback err
+      if res.statusCode isnt 200
+        out.error "ILR stored query failed with response code #{res.statusCode} and body: #{body}"
+        return callback new Error "Returned non-200 response code: #{body}"
 
-    callback null, body
+      out.pushOrchestration
+        name: 'Extract DXF from ILR'
+        request:
+          path: ilrOptions.url
+          method: 'POST'
+          timestamp: beforeTimestamp
+        response:
+          status: res.statusCode
+          headers: res.headers
+          body: body
+          timestamp: new Date()
+
+      setDHISDataStore 'CSD-Loader-Last-Import', config.getConf()['ilr-to-dhis']['ilr-doc'], value: beforeTimestamp, false, (err) ->
+        if err then logger.error "Failed to set last import date in DHIS2 datastore #{err}"
+      callback null, body
 
 
 # post DXF data to DHIS2 api
@@ -427,3 +491,6 @@ if process.env.NODE_ENV is 'test'
   exports.fetchDXFFromIlr = fetchDXFFromIlr
   exports.pollTask = pollTask
   exports.rebuildDHIS2resourceTable = rebuildDHIS2resourceTable
+  exports.setDHISDataStore = setDHISDataStore
+  exports.getDHISDataStore = getDHISDataStore
+  exports.fetchLastImportTs = fetchLastImportTs

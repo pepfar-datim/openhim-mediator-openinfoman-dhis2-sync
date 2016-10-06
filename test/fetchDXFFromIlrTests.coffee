@@ -26,6 +26,7 @@ describe 'fetchDXFFromIlr()', ->
     config.getConf()['sync-type']['both-trigger-client-cert'] = "#{fs.readFileSync 'test/resources/client-cert.pem'}"
     config.getConf()['sync-type']['both-trigger-client-key'] = "#{fs.readFileSync 'test/resources/client-key.pem'}"
     config.getConf()['sync-type']['both-trigger-ca-cert'] = "#{fs.readFileSync 'test/resources/server-cert.pem'}"
+    config.getConf()['ilr-to-dhis']['dhis2-url'] = "https://localhost:32001/dhis2"
 
     options =
       key: fs.readFileSync 'test/resources/server-key.pem'
@@ -44,10 +45,18 @@ describe 'fetchDXFFromIlr()', ->
       errorTargetCalled = true
       res.writeHead 500, {'Content-Type': 'text/plain'}
       res.end 'Error'
+    dhisMock = https.createServer options, (req, res) ->
+      if req.method is 'POST'
+        res.writeHead 201, {'Content-Type': 'application/json'}
+        res.end()
+      else if req.method is 'GET' or req.method is 'PUT'
+        res.writeHead 200, {'Content-Type': 'application/json'}
+        res.end(JSON.stringify(value: new Date))
 
     target.listen 7125, (err) ->
       return done err if err
-      errorTarget.listen 7126, done
+      errorTarget.listen 7126, ->
+        dhisMock.listen 32001, done
 
   beforeEach (done) ->
     targetCalled = false
