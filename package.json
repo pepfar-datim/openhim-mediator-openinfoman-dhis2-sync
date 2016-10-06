@@ -4,7 +4,7 @@
   "description": "OpenInfoMan-DHIS2 Sync Mediator",
   "scripts": {
     "prepublish": "grunt build",
-    "test": "grunt test",
+    "test": "nyc grunt test",
     "start": "node lib/server.js"
   },
   "private": true,
