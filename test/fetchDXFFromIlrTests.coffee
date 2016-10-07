@@ -10,6 +10,8 @@ describe 'fetchDXFFromIlr()', ->
   target = null
   targetCalled = false
   authPresent = false
+  fetchTsCallled = false
+  updateTsCallled = false
 
   errorTarget = null
   errorTargetCalled = false
@@ -26,6 +28,7 @@ describe 'fetchDXFFromIlr()', ->
     config.getConf()['sync-type']['both-trigger-client-cert'] = "#{fs.readFileSync 'test/resources/client-cert.pem'}"
     config.getConf()['sync-type']['both-trigger-client-key'] = "#{fs.readFileSync 'test/resources/client-key.pem'}"
     config.getConf()['sync-type']['both-trigger-ca-cert'] = "#{fs.readFileSync 'test/resources/server-cert.pem'}"
+    config.getConf()['ilr-to-dhis']['dhis2-url'] = "https://localhost:32001/dhis2"
 
     options =
       key: fs.readFileSync 'test/resources/server-key.pem'
@@ -44,10 +47,20 @@ describe 'fetchDXFFromIlr()', ->
       errorTargetCalled = true
       res.writeHead 500, {'Content-Type': 'text/plain'}
       res.end 'Error'
+    dhisMock = https.createServer options, (req, res) ->
+      if req.method is 'GET'
+        fetchTsCallled = true
+        res.writeHead 200, {'Content-Type': 'application/json'}
+        res.end(JSON.stringify(value: new Date))
+      else if req.method is 'PUT'
+        updateTsCallled = true
+        res.writeHead 200, {'Content-Type': 'application/json'}
+        res.end()
 
     target.listen 7125, (err) ->
       return done err if err
-      errorTarget.listen 7126, done
+      errorTarget.listen 7126, ->
+        dhisMock.listen 32001, done
 
   beforeEach (done) ->
     targetCalled = false
@@ -62,7 +75,6 @@ describe 'fetchDXFFromIlr()', ->
     server.fetchDXFFromIlr out, (err, dxf) ->
       should.not.exist err
       dxf.toString().should.be.exactly 'DXF'
-      console.log targetCalled
       targetCalled.should.be.true()
       done()
 
@@ -98,4 +110,18 @@ describe 'fetchDXFFromIlr()', ->
     server.fetchDXFFromIlr out, (err, dxf) ->
       should.not.exist err
       authPresent.should.be.true()
+      done()
+
+  it 'should fetch last updated ts', (done) ->
+    config.getConf()['ilr-to-dhis']['ilr-url'] = 'https://localhost:7125/ILR/CSD'
+    server.fetchDXFFromIlr out, (err, dxf) ->
+      should.not.exist err
+      fetchTsCallled.should.be.true()
+      done()
+
+  it 'should update last updated ts', (done) ->
+    config.getConf()['ilr-to-dhis']['ilr-url'] = 'https://localhost:7125/ILR/CSD'
+    server.fetchDXFFromIlr out, (err, dxf) ->
+      should.not.exist err
+      updateTsCallled.should.be.true()
       done()

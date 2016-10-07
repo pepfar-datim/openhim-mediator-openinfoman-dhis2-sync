@@ -95,7 +95,7 @@ describe 'Rebuild DHIS2 resource table', ->
 
     it 'should poll tasks until completed is returned', (done) ->
       config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:7130'
-      server.pollTask out, 'RESOURCETABLE_UPDATE', 10, 50, (err) ->
+      server.pollTask out, 'RESOURCETABLE_UPDATE', 20, 100, (err) ->
         should.not.exist err
         timesTargetCalled.should.be.exactly 4
         authPresent.should.be.true()
@@ -103,21 +103,21 @@ describe 'Rebuild DHIS2 resource table', ->
 
     it 'should return an error if something goes wrong querying tasks', (done) ->
       config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:7131'
-      server.pollTask out, 'RESOURCETABLE_UPDATE', 10, 50, (err) ->
+      server.pollTask out, 'RESOURCETABLE_UPDATE', 20, 100, (err) ->
         should.exist err
         err.message.should.be.exactly 'Incorrect status code recieved, 500'
         done()
 
     it 'should timeout', (done) ->
       config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:7130'
-      server.pollTask out, 'RESOURCETABLE_UPDATE', 40, 50, (err) ->
+      server.pollTask out, 'RESOURCETABLE_UPDATE', 80, 100, (err) ->
         should.exist err
         err.message.should.be.exactly 'Polled tasks endpoint 2 time and still not completed, timing out...'
         done()
 
     it 'should record an orchestration', (done) ->
       config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:7130'
-      server.pollTask out, 'RESOURCETABLE_UPDATE', 10, 50, (err) ->
+      server.pollTask out, 'RESOURCETABLE_UPDATE', 20, 100, (err) ->
         should.not.exist err
         orchestrations.length.should.be.exactly 1
         orchestrations[0].name.should.be.exactly 'Polled DHIS resource rebuild task 4 times'
