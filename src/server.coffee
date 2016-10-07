@@ -167,10 +167,9 @@ getDHISDataStore = (namespace, key, callback) ->
     else
       return callback null, body
 
-# Fetch last import timestamp
+# Fetch last import timestamp and create if it doesn't exist
 fetchLastImportTs = (callback) ->
   getDHISDataStore 'CSD-Loader-Last-Import', config.getConf()['ilr-to-dhis']['ilr-doc'], (err, data) ->
-    console.log err
     if err
       logger.info 'Could not find last updated timestamp, creating one.'
       date = new Date(0)
@@ -227,7 +226,7 @@ fetchDXFFromIlr = (out, callback) ->
           body: body
           timestamp: new Date()
 
-      setDHISDataStore 'CSD-Loader-Last-Import', config.getConf()['ilr-to-dhis']['ilr-doc'], value: beforeTimestamp, false, (err) ->
+      setDHISDataStore 'CSD-Loader-Last-Import', config.getConf()['ilr-to-dhis']['ilr-doc'], value: beforeTimestamp, true, (err) ->
         if err then logger.error "Failed to set last import date in DHIS2 datastore #{err}"
       callback null, body
 

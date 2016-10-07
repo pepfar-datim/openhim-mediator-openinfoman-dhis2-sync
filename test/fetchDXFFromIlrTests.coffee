@@ -10,6 +10,8 @@ describe 'fetchDXFFromIlr()', ->
   target = null
   targetCalled = false
   authPresent = false
+  fetchTsCallled = false
+  updateTsCallled = false
 
   errorTarget = null
   errorTargetCalled = false
@@ -46,12 +48,14 @@ describe 'fetchDXFFromIlr()', ->
       res.writeHead 500, {'Content-Type': 'text/plain'}
       res.end 'Error'
     dhisMock = https.createServer options, (req, res) ->
-      if req.method is 'POST'
-        res.writeHead 201, {'Content-Type': 'application/json'}
-        res.end()
-      else if req.method is 'GET' or req.method is 'PUT'
+      if req.method is 'GET'
+        fetchTsCallled = true
         res.writeHead 200, {'Content-Type': 'application/json'}
         res.end(JSON.stringify(value: new Date))
+      else if req.method is 'PUT'
+        updateTsCallled = true
+        res.writeHead 200, {'Content-Type': 'application/json'}
+        res.end()
 
     target.listen 7125, (err) ->
       return done err if err
@@ -71,7 +75,6 @@ describe 'fetchDXFFromIlr()', ->
     server.fetchDXFFromIlr out, (err, dxf) ->
       should.not.exist err
       dxf.toString().should.be.exactly 'DXF'
-      console.log targetCalled
       targetCalled.should.be.true()
       done()
 
@@ -107,4 +110,18 @@ describe 'fetchDXFFromIlr()', ->
     server.fetchDXFFromIlr out, (err, dxf) ->
       should.not.exist err
       authPresent.should.be.true()
+      done()
+
+  it 'should fetch last updated ts', (done) ->
+    config.getConf()['ilr-to-dhis']['ilr-url'] = 'https://localhost:7125/ILR/CSD'
+    server.fetchDXFFromIlr out, (err, dxf) ->
+      should.not.exist err
+      fetchTsCallled.should.be.true()
+      done()
+
+  it 'should update last updated ts', (done) ->
+    config.getConf()['ilr-to-dhis']['ilr-url'] = 'https://localhost:7125/ILR/CSD'
+    server.fetchDXFFromIlr out, (err, dxf) ->
+      should.not.exist err
+      updateTsCallled.should.be.true()
       done()
