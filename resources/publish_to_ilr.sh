@@ -105,8 +105,10 @@ source_config
 
 #check if LastExported key is in CSD-Loader namespace for DHIS2 data store
 echo "Checking CSD-Loader data stored contents"
-HASKEY=`$CURL -sv -o /dev/null  -w "%{http_code}"  $DHIS2_AUTH  -H 'Accept: application/json' $DHIS2_URL/api/dataStore/CSD-Loader-Last-Export/$ILR_DOC | $GREP -qs '200\|201'`
-
+set +e
+NOTHASKEYOUT="`$CURL -sv -o /dev/null  -w \"%{http_code}\"  $DHIS2_AUTH  -H \"Accept: application/json\" $DHIS2_URL/api/dataStore/CSD-Loader-Last-Export/$ILR_DOC |  $GREP -qs \"200\|201\"`"
+NOTHASKEY=$?
+set -e
 
 #create destitation document (if it doesn't exist)
 echo "Creating $ILR_DOC on ILR at $ILR_URL (if it doesn't exist)"
@@ -122,7 +124,7 @@ fi
 if [ "$FULL" = true ]; then
     echo "Doing full publish"
     LASTUPDATE=false
-elif [ "$HASKEY" = "1" ]; then
+elif [ "$NOTHASKEY" = "1" ]; then
     echo "Getting last export time from $DHIS2_URL"
     LASTUPDATE=`$CURL -sv  $DHIS2_AUTH  -H 'Accept: application/json' $DHIS2_URL/api/dataStore/CSD-Loader-Last-Export/$ILR_DOC | $JSHON -e value`
     #strip any beginning / ending quotes
@@ -218,10 +220,10 @@ echo $CSR | $CURL -sv --data-binary @- -X POST -H 'Content-Type: text/xml' $ILR_
 
 #update last exported
 echo "Updating export time in CSD-Loader data store to $EXPORTED"
-if [ "$HASKEY" = "1" ]; then
-    METHOD="PUT"
-else
+if [ "$NOTHASKEY" = "1" ]; then
     METHOD="POST"
+else
+    METHOD="PUT"
 fi
 
 
