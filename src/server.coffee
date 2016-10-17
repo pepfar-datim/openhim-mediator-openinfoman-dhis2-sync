@@ -205,6 +205,7 @@ fetchDXFFromIlr = (out, callback) ->
         pass: config.getConf()['ilr-to-dhis']['ilr-pass']
 
     out.info "Fetching DXF from ILR #{ilrOptions.url} ..."
+    out.info "with body: #{ilrOptions.body}"
     beforeTimestamp = new Date()
     ilrReq = request.post ilrOptions, (err, res, body) ->
       if err
@@ -219,6 +220,7 @@ fetchDXFFromIlr = (out, callback) ->
         request:
           path: ilrOptions.url
           method: 'POST'
+          body: ilrOptions.body
           timestamp: beforeTimestamp
         response:
           status: res.statusCode
