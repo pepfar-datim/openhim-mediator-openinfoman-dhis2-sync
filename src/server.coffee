@@ -175,7 +175,7 @@ fetchLastImportTs = (callback) ->
       date = new Date(0)
       setDHISDataStore 'CSD-Loader-Last-Import', config.getConf()['ilr-to-dhis']['ilr-doc'], value: date, false, (err) ->
         if err then return callback new Error "Could not write last export to DHIS2 datastore #{err.stack}"
-        callback null, date
+        callback null, date.toISOString()
     else
       callback null, data.value
 

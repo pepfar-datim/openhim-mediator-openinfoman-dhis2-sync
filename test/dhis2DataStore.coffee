@@ -120,6 +120,6 @@ describe 'DHIS2 DataStore tests', ->
       mockServer.listen 32001, ->
         server.fetchLastImportTs (err, ts) ->
           if err then return done err
-          JSON.stringify(ts).should.be.exactly JSON.stringify(new Date(0))
+          ts.should.be.exactly new Date(0).toISOString()
           mockServer.close()
           done()
