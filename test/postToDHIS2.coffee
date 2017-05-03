@@ -1,5 +1,7 @@
 https = require 'https'
 fs = require 'fs'
+url = require 'url'
+
 server = require '../lib/server'
 logger = require 'winston'
 should = require 'should'
@@ -26,10 +28,20 @@ describe 'Post DXF to DHIS2', ->
     errorTarget = https.createServer options, (req, res) ->
       res.writeHead 500, {'Content-Type': 'text/plain'}
       res.end 'Not OK'
+    asyncTarget = https.createServer options, (req, res) ->
+      urlObj = url.parse req.url, true
+      if urlObj.query.async
+        res.writeHead 202, {'Content-Type': 'text/plain'}
+        res.end 'OK'
+      else
+        res.writeHead 500, {'Content-Type': 'text/plain'}
+        res.end 'Not OK'
 
     target.listen 8443, (err) ->
       return done err if err
-      errorTarget.listen 8124, done
+      errorTarget.listen 8124, (err) ->
+        return done err if err
+        asyncTarget.listen 8125, done
 
   beforeEach (done) ->
     targetCalled = false
@@ -50,6 +62,18 @@ describe 'Post DXF to DHIS2', ->
   it 'should send a POST request with DXF body to a DHIS2 server', (done) ->
     dxfData = fs.readFileSync 'test/resources/metaData.xml'
     config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:8443'
+    out =
+      info: (data) -> logger.info data
+      error: (data) -> logger.error data
+      pushOrchestration: (o) -> logger.info o
+    server.postToDhis out, dxfData, (success) ->
+      success.should.be.exactly true
+      done()
+
+  it 'should send async option if it is set', (done) ->
+    dxfData = fs.readFileSync 'test/resources/metaData.xml'
+    config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:8125'
+    config.getConf()['ilr-to-dhis']['dhis2-async'] = true
     out =
       info: (data) -> logger.info data
       error: (data) -> logger.error data

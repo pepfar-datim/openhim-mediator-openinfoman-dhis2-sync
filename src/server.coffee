@@ -251,6 +251,8 @@ postToDhis = (out, dxfData, callback) ->
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
     timeout: 0
     headers: { 'content-type': 'application/xml' }
+  if config.getConf()['ilr-to-dhis']['dhis2-async']
+    options.qs = async: true
 
   beforeTimestamp = new Date()
   request.post options, (err, res, body) ->
@@ -272,8 +274,13 @@ postToDhis = (out, dxfData, callback) ->
         timestamp: new Date()
 
     out.info "Response: [#{res.statusCode}] #{body}"
+
     if 200 <= res.statusCode <= 399
-      callback true
+      if config.getConf()['ilr-to-dhis']['dhis2-async']
+        # startPolling(callback) # TO IMPLEMENT - use pollTask() perhaps?
+        callback true # remove this when implemented
+      else
+        callback true
     else
       out.error 'Post to DHIS2 failed'
       callback false
