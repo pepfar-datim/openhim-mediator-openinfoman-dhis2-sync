@@ -39,7 +39,7 @@ describe 'Post DXF to DHIS2', ->
         
     asyncReceiverTarget = https.createServer options, (req, res) ->
       res.writeHead 200, {'Content-Type': 'text/plain'}
-      res.end 'OK'
+      res.end 'Test Response'
 
 
     target.listen 8443, (err) ->
@@ -88,6 +88,7 @@ describe 'Post DXF to DHIS2', ->
       done()
     
   it 'should send dhis2 message to async receiver mediator when async job is complete', (done) ->
+    orchestrations = []
     dxfData = fs.readFileSync 'test/resources/metaData.xml'
     config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:8125'
     config.getConf()['ilr-to-dhis']['dhis2-async'] = true
@@ -95,7 +96,11 @@ describe 'Post DXF to DHIS2', ->
     out =
       info: (data) -> logger.info data
       error: (data) -> logger.error data
-      pushOrchestration: (o) -> logger.info o
+      pushOrchestration: (o) ->
+        logger.info o
+        orchestrations.push o
     server.postToDhis out, dxfData, (success) ->
       success.should.be.exactly true
+      orchestrations[1].name.should.be.exactly 'Send to Async Receiver'
+      orchestrations[1].response.body.should.be.exactly 'Test Response'
       done()
