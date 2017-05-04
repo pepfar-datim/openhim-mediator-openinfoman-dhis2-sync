@@ -232,6 +232,41 @@ fetchDXFFromIlr = (out, callback) ->
         if err then logger.error "Failed to set last import date in DHIS2 datastore #{err}"
       callback null, body
 
+sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
+  options =
+    url: config.getConf()['ilr-to-dhis']['dhis2-async-receiver-url']
+    body: res.body
+    headers:
+      'content-type': res.headers['content-type']
+    method: 'POST'
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    
+  beforeTimestamp = new Date()
+  request.post options, (err, res, body) ->
+    if err
+      out.error "Send to Async Receiver failed: #{err}"
+      return callback false
+      
+    if !(200 <= res.statusCode <= 399)
+      out.error "Send to Async Receiver responded with non 2/3xx statusCode #{res.statusCode}"
+      return callback false
+
+    out.pushOrchestration
+      name: 'Send to Async Receiver'
+      request:
+        path: options.url
+        method: options.method
+        body: options.body
+        timestamp: beforeTimestamp
+      response:
+        status: res.statusCode
+        headers: res.headers
+        body: body
+        timestamp: new Date()
+        
+    callback true
 
 # post DXF data to DHIS2 api
 postToDhis = (out, dxfData, callback) ->
@@ -283,9 +318,7 @@ postToDhis = (out, dxfData, callback) ->
         pollTask out, 'sites import', 'METADATA_IMPORT', period, timeout, (err) ->
           if err then return callback err
 
-          # TODO Send request to hook to update task status
-          return callback true
-
+          sendAsyncDhisImportResponseToReceiver out, res, callback
       else
         callback true
     else
