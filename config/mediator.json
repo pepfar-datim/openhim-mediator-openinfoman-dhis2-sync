@@ -184,6 +184,12 @@
           "description": "The version of DHIS to export data for. This is used to call the correct stored query in the ILR for the correct DHIS2 version."
         },
         {
+          "param": "dhis2-poll-path",
+          "type": "number",
+          "displayName": "DHIS2 async polling path",
+          "description": "The path on which to poll the DHIS2 API to check whether the sites import task has completed."
+        },
+        {
           "param": "dhis2-poll-period",
           "type": "number",
           "displayName": "DHIS2 tasks polling period (ms)",
@@ -270,6 +276,7 @@
       "dhis2-user": "admin",
       "dhis2-pass": "district",
       "dhis2-version": "v2.19",
+      "dhis2-poll-path": "path/to/polling/check",
       "dhis2-poll-period": "1000",
       "dhis2-poll-timeout": "7200000",
       "dhis2-rebuild-resources": false

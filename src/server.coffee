@@ -277,8 +277,15 @@ postToDhis = (out, dxfData, callback) ->
 
     if 200 <= res.statusCode <= 399
       if config.getConf()['ilr-to-dhis']['dhis2-async']
-        # startPolling(callback) # TO IMPLEMENT - use pollTask() perhaps?
-        callback true # remove this when implemented
+        period = config.getConf()['ilr-to-dhis']['dhis2-poll-period']
+        timeout = config.getConf()['ilr-to-dhis']['dhis2-poll-timeout']
+        # send out async polling request
+        pollTask out, 'sites import', 'METADATA_IMPORT', period, timeout, (err) ->
+          if err then return callback err
+
+          # TODO Send request to hook to update task status
+          return callback true
+
       else
         callback true
     else
@@ -286,7 +293,7 @@ postToDhis = (out, dxfData, callback) ->
       callback false
 
 # Poll DHIS2 task, period and timeout are in ms
-pollTask = (out, task, period, timeout, callback) ->
+pollTask = (out, orchName, task, period, timeout, callback) ->
   pollNum = 0
   beforeTimestamp = new Date()
   interval = setInterval () ->
@@ -305,15 +312,15 @@ pollTask = (out, task, period, timeout, callback) ->
         return callback err
       if res.statusCode isnt 200
         clearInterval interval
-        return callback new Error "Incorrect status code recieved, #{res.statusCode}"
+        return callback new Error "Incorrect status code received, #{res.statusCode}"
       pollNum++
       if not tasks[0]?.completed?
-        return callback new Error 'No tasks returned or bad tasks response recieved'
+        return callback new Error 'No tasks returned or bad tasks response received'
       if tasks[0]?.completed is true
         clearInterval interval
 
         out.pushOrchestration
-          name: "Polled DHIS resource rebuild task #{pollNum} times"
+          name: "Polled DHIS #{orchName} task #{pollNum} times"
           request:
             path: options.url
             method: options.method
@@ -324,7 +331,6 @@ pollTask = (out, task, period, timeout, callback) ->
             headers: res.headers
             body: JSON.stringify(tasks)
             timestamp: new Date()
-
         return callback()
       if pollNum * period >= timeout
         clearInterval interval
@@ -366,7 +372,7 @@ rebuildDHIS2resourceTable = (out, callback) ->
     if res.statusCode is 200
       period = config.getConf()['ilr-to-dhis']['dhis2-poll-period']
       timeout = config.getConf()['ilr-to-dhis']['dhis2-poll-timeout']
-      pollTask out, 'RESOURCETABLE_UPDATE', period, timeout, (err) ->
+      pollTask out, 'resource rebuild', 'RESOURCETABLE_UPDATE', period, timeout, (err) ->
         if err then return callback err
 
         return callback()
