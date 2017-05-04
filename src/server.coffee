@@ -242,7 +242,6 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
     cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
     key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
-
     
   beforeTimestamp = new Date()
   request.post options, (err, res, body) ->
