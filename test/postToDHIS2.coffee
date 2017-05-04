@@ -36,17 +36,21 @@ describe 'Post DXF to DHIS2', ->
       else
         res.writeHead 500, {'Content-Type': 'text/plain'}
         res.end 'Not OK'
+        
+    asyncReceiverTarget = https.createServer options, (req, res) ->
+      res.writeHead 200, {'Content-Type': 'text/plain'}
+      res.end 'OK'
+
 
     target.listen 8443, (err) ->
       return done err if err
       errorTarget.listen 8124, (err) ->
         return done err if err
-        asyncTarget.listen 8125, done
-
-  beforeEach (done) ->
-    targetCalled = false
-    errorTargetCalled = false
-    done()
+        asyncTarget.listen 8125, (err) ->
+          return done err if err
+          asyncReceiverTarget.listen 8126, (err) ->
+            return done err if err
+            done()
 
   it 'should NOT send request if DXF is empty', (done) ->
     dxfData = undefined
@@ -74,6 +78,20 @@ describe 'Post DXF to DHIS2', ->
     dxfData = fs.readFileSync 'test/resources/metaData.xml'
     config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:8125'
     config.getConf()['ilr-to-dhis']['dhis2-async'] = true
+    config.getConf()['ilr-to-dhis']['async-receiver-url'] = 'https://localhost:8126'
+    out =
+      info: (data) -> logger.info data
+      error: (data) -> logger.error data
+      pushOrchestration: (o) -> logger.info o
+    server.postToDhis out, dxfData, (success) ->
+      success.should.be.exactly true
+      done()
+    
+  it 'should send dhis2 message to async receiver mediator when async job is complete', (done) ->
+    dxfData = fs.readFileSync 'test/resources/metaData.xml'
+    config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:8125'
+    config.getConf()['ilr-to-dhis']['dhis2-async'] = true
+    config.getConf()['ilr-to-dhis']['async-receiver-url'] = 'https://localhost:8126'
     out =
       info: (data) -> logger.info data
       error: (data) -> logger.error data

@@ -184,6 +184,12 @@
           "description": "The version of DHIS to export data for. This is used to call the correct stored query in the ILR for the correct DHIS2 version."
         },
         {
+          "displayName": "Async Response Receiver URL",
+          "description": "The URL for the system that receives the response when the async import is done",
+          "param": "async-receiver-url",
+          "type": "string"
+        },
+        {
           "param": "dhis2-poll-period",
           "type": "number",
           "displayName": "DHIS2 tasks polling period (ms)",
@@ -270,6 +276,7 @@
       "dhis2-user": "admin",
       "dhis2-pass": "district",
       "dhis2-version": "v2.19",
+      "async-receiver-url": "https://localhost/adxMediator",
       "dhis2-poll-period": "1000",
       "dhis2-poll-timeout": "7200000",
       "dhis2-rebuild-resources": false
