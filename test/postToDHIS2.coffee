@@ -1,10 +1,8 @@
 https = require 'https'
 fs = require 'fs'
 url = require 'url'
-sinon = require 'sinon'
-rewire = require 'rewire'
 
-server = rewire '../lib/server'
+server = require '../lib/server'
 logger = require 'winston'
 should = require 'should'
 config = require '../lib/config'
