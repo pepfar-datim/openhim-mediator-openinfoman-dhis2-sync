@@ -232,6 +232,41 @@ fetchDXFFromIlr = (out, callback) ->
         if err then logger.error "Failed to set last import date in DHIS2 datastore #{err}"
       callback null, body
 
+sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
+  options =
+    url: config.getConf()['ilr-to-dhis']['dhis2-async-receiver-url']
+    body: res.body
+    headers:
+      'content-type': res.headers['content-type']
+    method: 'POST'
+    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
+    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
+    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    
+  beforeTimestamp = new Date()
+  request.post options, (err, res, body) ->
+    if err
+      out.error "Send to Async Receiver failed: #{err}"
+      return callback false
+      
+    if !(200 <= res.statusCode <= 399)
+      out.error "Send to Async Receiver responded with non 2/3xx statusCode #{res.statusCode}"
+      return callback false
+
+    out.pushOrchestration
+      name: 'Send to Async Receiver'
+      request:
+        path: options.url
+        method: options.method
+        body: options.body
+        timestamp: beforeTimestamp
+      response:
+        status: res.statusCode
+        headers: res.headers
+        body: body
+        timestamp: new Date()
+        
+    callback true
 
 # post DXF data to DHIS2 api
 postToDhis = (out, dxfData, callback) ->
@@ -251,6 +286,8 @@ postToDhis = (out, dxfData, callback) ->
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
     timeout: 0
     headers: { 'content-type': 'application/xml' }
+  if config.getConf()['ilr-to-dhis']['dhis2-async']
+    options.qs = async: true
 
   beforeTimestamp = new Date()
   request.post options, (err, res, body) ->
@@ -272,14 +309,24 @@ postToDhis = (out, dxfData, callback) ->
         timestamp: new Date()
 
     out.info "Response: [#{res.statusCode}] #{body}"
+
     if 200 <= res.statusCode <= 399
-      callback true
+      if config.getConf()['ilr-to-dhis']['dhis2-async']
+        period = config.getConf()['ilr-to-dhis']['dhis2-poll-period']
+        timeout = config.getConf()['ilr-to-dhis']['dhis2-poll-timeout']
+        # send out async polling request
+        pollTask out, 'sites import', 'METADATA_IMPORT', period, timeout, (err) ->
+          if err then return callback err
+
+          sendAsyncDhisImportResponseToReceiver out, res, callback
+      else
+        callback true
     else
       out.error 'Post to DHIS2 failed'
       callback false
 
 # Poll DHIS2 task, period and timeout are in ms
-pollTask = (out, task, period, timeout, callback) ->
+pollTask = (out, orchName, task, period, timeout, callback) ->
   pollNum = 0
   beforeTimestamp = new Date()
   interval = setInterval () ->
@@ -298,15 +345,15 @@ pollTask = (out, task, period, timeout, callback) ->
         return callback err
       if res.statusCode isnt 200
         clearInterval interval
-        return callback new Error "Incorrect status code recieved, #{res.statusCode}"
+        return callback new Error "Incorrect status code received, #{res.statusCode}"
       pollNum++
       if not tasks[0]?.completed?
-        return callback new Error 'No tasks returned or bad tasks response recieved'
+        return callback new Error 'No tasks returned or bad tasks response received'
       if tasks[0]?.completed is true
         clearInterval interval
 
         out.pushOrchestration
-          name: "Polled DHIS resource rebuild task #{pollNum} times"
+          name: "Polled DHIS #{orchName} task #{pollNum} times"
           request:
             path: options.url
             method: options.method
@@ -317,7 +364,6 @@ pollTask = (out, task, period, timeout, callback) ->
             headers: res.headers
             body: JSON.stringify(tasks)
             timestamp: new Date()
-
         return callback()
       if pollNum * period >= timeout
         clearInterval interval
@@ -359,7 +405,7 @@ rebuildDHIS2resourceTable = (out, callback) ->
     if res.statusCode is 200
       period = config.getConf()['ilr-to-dhis']['dhis2-poll-period']
       timeout = config.getConf()['ilr-to-dhis']['dhis2-poll-timeout']
-      pollTask out, 'RESOURCETABLE_UPDATE', period, timeout, (err) ->
+      pollTask out, 'resource rebuild', 'RESOURCETABLE_UPDATE', period, timeout, (err) ->
         if err then return callback err
 
         return callback()

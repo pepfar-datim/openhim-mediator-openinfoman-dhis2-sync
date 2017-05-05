@@ -1,6 +1,6 @@
 {
   "urn": "urn:mediator:openinfoman-dhis2-sync",
-  "version": "2.3.2",
+  "version": "2.4.0",
   "name": "OpenInfoMan-DHIS2 Sync Mediator",
   "description": "OpenInfoMan-DHIS2 Sync Mediator",
   "endpoints": [
@@ -162,6 +162,12 @@
           "displayName": "DHIS2 URL"
         },
         {
+          "param": "dhis2-async",
+          "type": "bool",
+          "displayName": "DHIS2 Async Import",
+          "description": "Whether to use the DHIS2 async import mechanism to import sites or not."
+        },
+        {
           "param": "dhis2-user",
           "type": "string",
           "displayName": "DHIS2 Username"
@@ -178,10 +184,16 @@
           "description": "The version of DHIS to export data for. This is used to call the correct stored query in the ILR for the correct DHIS2 version."
         },
         {
+          "displayName": "Async Response Receiver URL",
+          "description": "The URL for the system that receives the response when the async import is done",
+          "param": "dhis2-async-receiver-url",
+          "type": "string"
+        },
+        {
           "param": "dhis2-poll-period",
           "type": "number",
           "displayName": "DHIS2 tasks polling period (ms)",
-          "description": "The period on which to poll the DHIS2 API to check whether the rebuild resource table system task is complete."
+          "description": "The period on which to poll the DHIS2 API to check whether an async system task is complete."
         },
         {
           "param": "dhis2-poll-timeout",
@@ -193,7 +205,7 @@
           "param": "dhis2-rebuild-resources",
           "type": "bool",
           "displayName": "DHIS2 enable resource rebuild",
-          "description": "If this is enabled then the DHIS2 resource table will be rebuilt after data is imported into DHIS2."
+          "description": "If this is enabled then the DHIS2 resource table will be rebuilt after data is imported into DHIS2. This is run as an async task in DHIS2."
         }
       ]
     },
@@ -260,9 +272,11 @@
       "ilr-url": "http://localhost:8984/CSD",
       "ilr-doc": "test",
       "dhis2-url": "https://localhost/dhis2",
+      "dhis2-async": false,
       "dhis2-user": "admin",
       "dhis2-pass": "district",
       "dhis2-version": "v2.19",
+      "dhis2-async-receiver-url": "https://localhost/adxAdapter",
       "dhis2-poll-period": "1000",
       "dhis2-poll-timeout": "7200000",
       "dhis2-rebuild-resources": false
