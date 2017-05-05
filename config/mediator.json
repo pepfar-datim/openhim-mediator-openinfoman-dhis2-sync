@@ -276,7 +276,7 @@
       "dhis2-user": "admin",
       "dhis2-pass": "district",
       "dhis2-version": "v2.19",
-      "dhis2-async-receiver-url": "https://localhost/adxMediator",
+      "dhis2-async-receiver-url": "https://localhost/adxAdapter",
       "dhis2-poll-period": "1000",
       "dhis2-poll-timeout": "7200000",
       "dhis2-rebuild-resources": false
