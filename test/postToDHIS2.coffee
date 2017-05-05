@@ -185,7 +185,6 @@ describe 'Post DXF to DHIS2', ->
       done()
     
   it 'should send dhis2 message to async receiver mediator when async job is complete', (done) ->
-    orchestrations = []
     dxfData = fs.readFileSync 'test/resources/metaData.xml'
     config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:8125'
     config.getConf()['ilr-to-dhis']['dhis2-async'] = true
