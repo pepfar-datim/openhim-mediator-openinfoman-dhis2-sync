@@ -2,6 +2,7 @@ require './init'
 
 logger = require 'winston'
 config = require './config'
+url = require 'url'
 
 express = require 'express'
 bodyParser = require 'body-parser'
@@ -242,13 +243,15 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
     cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
     key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
-    
+  if out.adxAdapterID
+    options.url += '/' + adxAdapterID
+
   beforeTimestamp = new Date()
   request.post options, (err, res, body) ->
     if err
       out.error "Send to Async Receiver failed: #{err}"
       return callback false
-      
+
     if !(200 <= res.statusCode <= 399)
       out.error "Send to Async Receiver responded with non 2/3xx statusCode #{res.statusCode}"
       return callback false
@@ -265,7 +268,7 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
         headers: res.headers
         body: body
         timestamp: new Date()
-        
+
     callback true
 
 # post DXF data to DHIS2 api
@@ -432,6 +435,12 @@ ilrToDhis = (out, callback) ->
 handler = (req, res) ->
   openhimTransactionID = req.headers['x-openhim-transactionid']
 
+  query = url.parse(req.url, true).query
+  adxAdapterID = null
+  if query.adxAdapterID
+    adxAdapterID = query.adxAdapterID
+    delete query.adxAdapterID
+
   _out = ->
     body = ""
     orchestrations = []
@@ -449,6 +458,7 @@ handler = (req, res) ->
       error: (data) -> append 'error', data
       pushOrchestration: (o) -> orchestrations.push o
       orchestrations: -> orchestrations
+      adxAdapterID: adxAdapterID
     }
   out = _out()
 
