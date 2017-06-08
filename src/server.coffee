@@ -247,7 +247,7 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
     options.url += '/' + out.adxAdapterID
 
   beforeTimestamp = new Date()
-  request.post options, (err, res, body) ->
+  request.put options, (err, res, body) ->
     if err
       out.error "Send to Async Receiver failed: #{err}"
       return callback false
