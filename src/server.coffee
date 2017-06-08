@@ -244,7 +244,7 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
     key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
   if out.adxAdapterID
-    options.url += '/' + adxAdapterID
+    options.url += '/' + out.adxAdapterID
 
   beforeTimestamp = new Date()
   request.post options, (err, res, body) ->
