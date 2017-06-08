@@ -239,7 +239,7 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
     body: res.body
     headers:
       'content-type': res.headers['content-type']
-    method: 'POST'
+    method: 'PUT'
     cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
     key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
     ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
