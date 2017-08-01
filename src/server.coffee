@@ -281,7 +281,7 @@ postToDhis = (out, dxfData, callback) ->
     return callback false
 
   options =
-    url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/metadata'
+    url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/metadata?preheatCache=false'
     body: dxfData
     method: 'POST'
     auth:
