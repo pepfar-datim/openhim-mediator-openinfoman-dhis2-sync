@@ -25,9 +25,6 @@ describe 'fetchDXFFromIlr()', ->
       orchestrations.push o
 
   before (done) ->
-    config.getConf()['sync-type']['both-trigger-client-cert'] = "#{fs.readFileSync 'test/resources/client-cert.pem'}"
-    config.getConf()['sync-type']['both-trigger-client-key'] = "#{fs.readFileSync 'test/resources/client-key.pem'}"
-    config.getConf()['sync-type']['both-trigger-ca-cert'] = "#{fs.readFileSync 'test/resources/server-cert.pem'}"
     config.getConf()['ilr-to-dhis']['dhis2-url'] = "https://localhost:32001/dhis2"
 
     options =

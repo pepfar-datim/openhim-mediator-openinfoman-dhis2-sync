@@ -1,6 +1,6 @@
 {
   "urn": "urn:mediator:openinfoman-dhis2-sync",
-  "version": "2.4.0",
+  "version": "3.0.0",
   "name": "OpenInfoMan-DHIS2 Sync Mediator",
   "description": "OpenInfoMan-DHIS2 Sync Mediator",
   "endpoints": [
@@ -232,21 +232,6 @@
           "param": "both-trigger-url",
           "type": "string",
           "displayName": "Both Mode Trigger URL"
-        },
-        {
-          "param": "both-trigger-client-cert",
-          "type": "bigstring",
-          "displayName": "Both Mode Trigger Client Certificate"
-        },
-        {
-          "param": "both-trigger-client-key",
-          "type": "bigstring",
-          "displayName": "Both Mode Trigger Client Key"
-        },
-        {
-          "param": "both-trigger-ca-cert",
-          "type": "bigstring",
-          "displayName": "Both Mode Trigger CA Cert"
         }
       ]
     }
