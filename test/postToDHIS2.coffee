@@ -13,10 +13,6 @@ describe 'Post DXF to DHIS2', ->
   orchestrations = []
 
   before (done) ->
-    config.getConf()['sync-type']['both-trigger-client-cert'] = "#{fs.readFileSync 'test/resources/client-cert.pem'}"
-    config.getConf()['sync-type']['both-trigger-client-key'] = "#{fs.readFileSync 'test/resources/client-key.pem'}"
-    config.getConf()['sync-type']['both-trigger-ca-cert'] = "#{fs.readFileSync 'test/resources/server-cert.pem'}"
-
     options =
       key: fs.readFileSync 'test/resources/server-key.pem'
       cert: fs.readFileSync 'test/resources/server-cert.pem'
@@ -69,7 +65,7 @@ describe 'Post DXF to DHIS2', ->
       else
         res.writeHead 500, {'Content-Type': 'text/plain'}
         res.end 'Not OK'
-        
+
     asyncReceiverTarget = https.createServer options, (req, res) ->
       res.writeHead 200, {'Content-Type': 'text/plain'}
       res.end 'Test Response'
@@ -183,7 +179,7 @@ describe 'Post DXF to DHIS2', ->
       orchestrations[0].name.should.be.exactly 'DHIS2 Import'
       orchestrations[1].name.should.be.exactly 'Polled DHIS sites import task 4 times'
       done()
-    
+
   it 'should send dhis2 message to async receiver mediator when async job is complete', (done) ->
     dxfData = fs.readFileSync 'test/resources/metaData.xml'
     config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:8125'

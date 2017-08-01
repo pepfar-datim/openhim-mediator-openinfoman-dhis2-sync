@@ -27,10 +27,6 @@ describe 'Rebuild DHIS2 resource table', ->
         orchestrations.push o
 
     before (done) ->
-      config.getConf()['sync-type']['both-trigger-client-cert'] = "#{fs.readFileSync 'test/resources/client-cert.pem'}"
-      config.getConf()['sync-type']['both-trigger-client-key'] = "#{fs.readFileSync 'test/resources/client-key.pem'}"
-      config.getConf()['sync-type']['both-trigger-ca-cert'] = "#{fs.readFileSync 'test/resources/server-cert.pem'}"
-
       options =
         key: fs.readFileSync 'test/resources/server-key.pem'
         cert: fs.readFileSync 'test/resources/server-cert.pem'
@@ -140,10 +136,6 @@ describe 'Rebuild DHIS2 resource table', ->
         orchestrations.push o
 
     before (done) ->
-      config.getConf()['sync-type']['both-trigger-client-cert'] = "#{fs.readFileSync 'test/resources/client-cert.pem'}"
-      config.getConf()['sync-type']['both-trigger-client-key'] = "#{fs.readFileSync 'test/resources/client-key.pem'}"
-      config.getConf()['sync-type']['both-trigger-ca-cert'] = "#{fs.readFileSync 'test/resources/server-cert.pem'}"
-
       options =
         key: fs.readFileSync 'test/resources/server-key.pem'
         cert: fs.readFileSync 'test/resources/server-cert.pem'

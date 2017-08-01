@@ -12,11 +12,14 @@ fs = require 'fs'
 spawn = require('child_process').spawn
 request = require 'request'
 
-
 tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync.cfg'
 
 falseIfEmpty = (s) -> if s? and s.trim().length>0 then s else false
-nullIfEmpty = (s) -> if s? and s.trim().length>0 then s else null
+nullIfFileNotFound = (file) ->
+  try
+    return fs.readFileSync(file)
+  catch err
+    return null
 
 cfg = -> """
 ########################################################################
@@ -91,9 +94,9 @@ dhisToIlr = (out, callback) ->
 bothTrigger = (out, callback) ->
   options =
     url: config.getConf()['sync-type']['both-trigger-url']
-    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
-    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
-    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    cert: nullIfFileNotFound('tls/cert.pem')
+    key: nullIfFileNotFound('tls/key.pem')
+    ca: nullIfFileNotFound('tls/ca.pem')
     timeout: 0
 
   out.info "Triggering #{options.url} ..."
@@ -130,9 +133,9 @@ setDHISDataStore = (namespace, key, data, update, callback) ->
     auth:
       username: config.getConf()['ilr-to-dhis']['dhis2-user']
       password: config.getConf()['ilr-to-dhis']['dhis2-pass']
-    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
-    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
-    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    cert: nullIfFileNotFound('tls/cert.pem')
+    key: nullIfFileNotFound('tls/key.pem')
+    ca: nullIfFileNotFound('tls/ca.pem')
     json: true
 
   if update
@@ -155,9 +158,9 @@ getDHISDataStore = (namespace, key, callback) ->
     auth:
       username: config.getConf()['ilr-to-dhis']['dhis2-user']
       password: config.getConf()['ilr-to-dhis']['dhis2-pass']
-    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
-    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
-    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    cert: nullIfFileNotFound('tls/cert.pem')
+    key: nullIfFileNotFound('tls/key.pem')
+    ca: nullIfFileNotFound('tls/ca.pem')
     json: true
 
   request.get options, (err, res, body) ->
@@ -196,9 +199,9 @@ fetchDXFFromIlr = (out, callback) ->
               </csd:requestParams>"""
       headers:
         'Content-Type': 'text/xml'
-      cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
-      key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
-      ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+      cert: nullIfFileNotFound('tls/cert.pem')
+      key: nullIfFileNotFound('tls/key.pem')
+      ca: nullIfFileNotFound('tls/ca.pem')
 
     if config.getConf()['ilr-to-dhis']['ilr-user'] and config.getConf()['ilr-to-dhis']['ilr-pass']
       ilrOptions.auth =
@@ -240,9 +243,9 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
     headers:
       'content-type': res.headers['content-type']
     method: 'PUT'
-    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
-    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
-    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    cert: nullIfFileNotFound('tls/cert.pem')
+    key: nullIfFileNotFound('tls/key.pem')
+    ca: nullIfFileNotFound('tls/ca.pem')
   if out.adxAdapterID
     options.url += '/' + out.adxAdapterID
 
@@ -284,9 +287,9 @@ postToDhis = (out, dxfData, callback) ->
     auth:
       username: config.getConf()['ilr-to-dhis']['dhis2-user']
       password: config.getConf()['ilr-to-dhis']['dhis2-pass']
-    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
-    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
-    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    cert: nullIfFileNotFound('tls/cert.pem')
+    key: nullIfFileNotFound('tls/key.pem')
+    ca: nullIfFileNotFound('tls/ca.pem')
     timeout: 0
     headers: { 'content-type': 'application/xml' }
   if config.getConf()['ilr-to-dhis']['dhis2-async']
@@ -338,9 +341,9 @@ pollTask = (out, orchName, task, period, timeout, callback) ->
       auth:
         username: config.getConf()['ilr-to-dhis']['dhis2-user']
         password: config.getConf()['ilr-to-dhis']['dhis2-pass']
-      cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
-      key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
-      ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+      cert: nullIfFileNotFound('tls/cert.pem')
+      key: nullIfFileNotFound('tls/key.pem')
+      ca: nullIfFileNotFound('tls/ca.pem')
       json: true
     request.get options, (err, res, tasks) ->
       if err
@@ -381,9 +384,9 @@ rebuildDHIS2resourceTable = (out, callback) ->
     auth:
       username: config.getConf()['ilr-to-dhis']['dhis2-user']
       password: config.getConf()['ilr-to-dhis']['dhis2-pass']
-    cert: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-cert']
-    key: nullIfEmpty config.getConf()['sync-type']['both-trigger-client-key']
-    ca: nullIfEmpty config.getConf()['sync-type']['both-trigger-ca-cert']
+    cert: nullIfFileNotFound('tls/cert.pem')
+    key: nullIfFileNotFound('tls/key.pem')
+    ca: nullIfFileNotFound('tls/ca.pem')
 
   beforeTimestamp = new Date()
   request.post options, (err, res, body) ->

@@ -11,6 +11,9 @@ Checkout and build
 git clone https://github.com/jembi/openhim-mediator-openinfoman-dhis2-sync.git
 npm install
 ```
+
+Replace the default certificate files in the `tls/` folder with those that you you want to use. Skipping this step would make your installation insecure, ensure you set these in production.
+
 and to run the mediator
 ```
 node start -- -c myConfig.json
