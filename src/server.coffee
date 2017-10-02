@@ -88,7 +88,10 @@ dhisToIlr = (out, callback) ->
         body: logs
         timestamp: new Date()
 
-    callback code is 0
+    if code is 0
+      callback()
+    else
+      callback new Error "Script failed with code #{code}"
 
 
 bothTrigger = (out, callback) ->
@@ -105,7 +108,7 @@ bothTrigger = (out, callback) ->
   request.get options, (err, res, body) ->
     if err
       out.error "Trigger failed: #{err}"
-      return callback false
+      return callback new Error "Trigger failed: #{err}"
 
     out.pushOrchestration
       name: 'Trigger'
@@ -121,10 +124,10 @@ bothTrigger = (out, callback) ->
 
     out.info "Response: [#{res.statusCode}] #{body}"
     if 200 <= res.statusCode <= 399
-      callback true
+      callback()
     else
-      out.error 'Trigger failed'
-      callback false
+      out.error "Trigger failed with status code #{res.statusCode}"
+      callback new Error "Trigger failed with status code #{res.statusCode}"
 
 setDHISDataStore = (namespace, key, data, update, callback) ->
   options =
@@ -248,16 +251,21 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
     ca: nullIfFileNotFound('tls/ca.pem')
   if out.adxAdapterID
     options.url += '/' + out.adxAdapterID
+  else
+    out.error 'No ADX Adapter ID present, unable to forward response to ADX Adapter'
+    err = new Error 'No ADX Adapter ID present, unable to forward response to ADX Adapter'
+    err.status = 400
+    return callback err
 
   beforeTimestamp = new Date()
   request.put options, (err, res, body) ->
     if err
       out.error "Send to Async Receiver failed: #{err}"
-      return callback false
+      return callback new Error "Send to Async Receiver failed: #{err}"
 
     if !(200 <= res.statusCode <= 399)
       out.error "Send to Async Receiver responded with non 2/3xx statusCode #{res.statusCode}"
-      return callback false
+      return callback new Error "Send to Async Receiver responded with non 2/3xx statusCode #{res.statusCode}"
 
     out.pushOrchestration
       name: 'Send to Async Receiver'
@@ -272,13 +280,13 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
         body: body
         timestamp: new Date()
 
-    callback true
+    callback()
 
 # post DXF data to DHIS2 api
 postToDhis = (out, dxfData, callback) ->
   if not dxfData
     out.info "No DXF body supplied"
-    return callback false
+    return callback new Error("No DXF body supplied")
 
   options =
     url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/metadata?preheatCache=false'
@@ -299,7 +307,7 @@ postToDhis = (out, dxfData, callback) ->
   request.post options, (err, res, body) ->
     if err
       out.error "Post to DHIS2 failed: #{err}"
-      return callback false
+      return callback new Error("Post to DHIS2 failed: #{err}")
 
     out.pushOrchestration
       name: 'DHIS2 Import'
@@ -326,10 +334,10 @@ postToDhis = (out, dxfData, callback) ->
 
           sendAsyncDhisImportResponseToReceiver out, res, callback
       else
-        callback true
+        callback()
     else
-      out.error 'Post to DHIS2 failed'
-      callback false
+      out.error "Post to DHIS2 failed with status code #{res.statusCode}"
+      callback new Error "Post to DHIS2 failed with status code #{res.statusCode}"
 
 # Poll DHIS2 task, period and timeout are in ms
 pollTask = (out, orchName, task, period, timeout, callback) ->
@@ -422,17 +430,17 @@ rebuildDHIS2resourceTable = (out, callback) ->
 
 ilrToDhis = (out, callback) ->
   fetchDXFFromIlr out, (err, dxf) ->
-    if err then return callback false
-    postToDhis out, dxf, (result) ->
-      if result
+    if err then return callback err
+    postToDhis out, dxf, (err) ->
+      if not err
         if config.getConf()['ilr-to-dhis']['dhis2-rebuild-resources']
           rebuildDHIS2resourceTable out, (err) ->
-            if err then return callback false
-            callback true
+            if err then return callback err
+            callback()
         else
-          callback true
+          callback()
       else
-        callback false
+        callback err
 
 
 handler = (req, res) ->
@@ -467,16 +475,19 @@ handler = (req, res) ->
 
   out.info "Running sync with mode #{config.getConf()['sync-type']['mode']} ..."
 
-  end = (successful) ->
+  end = (err) ->
+    if err and not err.status
+      err.status = 500
+
     res.set 'Content-Type', 'application/json+openhim'
     res.send {
       'x-mediator-urn': config.getMediatorConf().urn
-      status: if successful then 'Successful' else 'Failed'
+      status: if err then 'Failed' else 'Successful'
       response:
-        status: if successful then 200 else 500
+        status: if err then err.status else 200
         headers:
           'content-type': 'application/json'
-        body: out.body()
+        body: if err then err.message + '\n\n' + out.body() else out.body()
         timestamp: new Date()
       orchestrations: out.orchestrations()
     }
@@ -486,14 +497,14 @@ handler = (req, res) ->
   else if config.getConf()['sync-type']['mode'] is 'ILR to DHIS2'
     ilrToDhis out, end
   else
-    dhisToIlr out, (successful) ->
-      if not successful then return end false
+    dhisToIlr out, (err) ->
+      if err then return end err
 
       next = ->
         ilrToDhis out, end
       if config.getConf()['sync-type']['both-trigger-enabled']
-        bothTrigger out, (successful) ->
-          if not successful then return end false
+        bothTrigger out, (err) ->
+          if err then return end err
           next()
       else
         next()

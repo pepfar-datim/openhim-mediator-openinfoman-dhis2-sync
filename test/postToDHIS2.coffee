@@ -67,8 +67,14 @@ describe 'Post DXF to DHIS2', ->
         res.end 'Not OK'
 
     asyncReceiverTarget = https.createServer options, (req, res) ->
-      res.writeHead 200, {'Content-Type': 'text/plain'}
-      res.end 'Test Response'
+      adxAdapterID = req.url.split('/')[1]
+
+      if adxAdapterID
+        res.writeHead 200, {'Content-Type': 'text/plain'}
+        res.end 'Test Response'
+      else
+        res.writeHead 500
+        res.end 'Internal server error'
 
     target.listen 8443, (err) ->
       return done err if err
@@ -93,8 +99,10 @@ describe 'Post DXF to DHIS2', ->
       info: (data) -> logger.info data
       error: (data) -> logger.error data
       pushOrchestration: (o) -> logger.info o
-    server.postToDhis out, dxfData, (success) ->
-      success.should.be.exactly false
+      adxAdapterID: '1234'
+    server.postToDhis out, dxfData, (err) ->
+      should.exist(err)
+      err.message.should.be.exactly('No DXF body supplied')
       done()
 
   it 'should send a POST request with DXF body to a DHIS2 server', (done) ->
@@ -104,8 +112,9 @@ describe 'Post DXF to DHIS2', ->
       info: (data) -> logger.info data
       error: (data) -> logger.error data
       pushOrchestration: (o) -> logger.info o
-    server.postToDhis out, dxfData, (success) ->
-      success.should.be.exactly true
+      adxAdapterID: '1234'
+    server.postToDhis out, dxfData, (err) ->
+      should.not.exist err
       done()
 
   it 'should send async option if it is set', (done) ->
@@ -119,8 +128,9 @@ describe 'Post DXF to DHIS2', ->
       info: (data) -> logger.info data
       error: (data) -> logger.error data
       pushOrchestration: (o) -> logger.info o
-    server.postToDhis out, dxfData, (success) ->
-      success.should.be.exactly true
+      adxAdapterID: '1234'
+    server.postToDhis out, dxfData, (err) ->
+      should.not.exist err
       done()
 
   it 'should callback when polling task has completed', (done) ->
@@ -134,8 +144,9 @@ describe 'Post DXF to DHIS2', ->
       info: (data) -> logger.info data
       error: (data) -> logger.error data
       pushOrchestration: (o) -> logger.info o
-    server.postToDhis out, dxfData, (success) ->
-      success.should.be.exactly true
+      adxAdapterID: '1234'
+    server.postToDhis out, dxfData, (err) ->
+      should.not.exist err
       pollingTargetCalled.should.be.true()
       timesTargetCalled.should.be.exactly 4
       done()
@@ -151,6 +162,7 @@ describe 'Post DXF to DHIS2', ->
       info: (data) -> logger.info data
       error: (data) -> logger.error data
       pushOrchestration: (o) -> logger.info o
+      adxAdapterID: '1234'
     server.postToDhis out, dxfData, (err) ->
       should.exist err
       err.message.should.be.exactly 'Polled tasks endpoint 2 time and still not completed, timing out...'
@@ -171,8 +183,9 @@ describe 'Post DXF to DHIS2', ->
       pushOrchestration: (o) ->
         logger.info o
         orchestrations.push o
-    server.postToDhis out, dxfData, (success) ->
-      success.should.be.exactly true
+      adxAdapterID: '1234'
+    server.postToDhis out, dxfData, (err) ->
+      should.not.exist err
       pollingTargetCalled.should.be.true()
       timesTargetCalled.should.be.exactly 4
       orchestrations.length.should.be.exactly 3
@@ -191,8 +204,26 @@ describe 'Post DXF to DHIS2', ->
       pushOrchestration: (o) ->
         logger.info o
         orchestrations.push o
-    server.postToDhis out, dxfData, (success) ->
-      success.should.be.exactly true
+      adxAdapterID: '1234'
+    server.postToDhis out, dxfData, (err) ->
+      should.not.exist err
       orchestrations[2].name.should.be.exactly 'Send to Async Receiver'
       orchestrations[2].response.body.should.be.exactly 'Test Response'
+      done()
+
+  it 'should return an error when there is no ADXAdapterId to use', (done) ->
+    dxfData = fs.readFileSync 'test/resources/metaData.xml'
+    config.getConf()['ilr-to-dhis']['dhis2-url'] = 'https://localhost:8125'
+    config.getConf()['ilr-to-dhis']['dhis2-async'] = true
+    config.getConf()['ilr-to-dhis']['dhis2-async-receiver-url'] = 'https://localhost:8126'
+    out =
+      info: (data) -> logger.info data
+      error: (data) -> logger.error data
+      pushOrchestration: (o) ->
+        logger.info o
+        orchestrations.push o
+    server.postToDhis out, dxfData, (err) ->
+      should.exist err
+      err.status.should.be.exactly 400
+      err.message.should.be.exactly 'No ADX Adapter ID present, unable to forward response to ADX Adapter'
       done()
