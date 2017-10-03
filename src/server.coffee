@@ -286,7 +286,7 @@ sendAsyncDhisImportResponseToReceiver = (out, res, callback) ->
 postToDhis = (out, dxfData, callback) ->
   if not dxfData
     out.info "No DXF body supplied"
-    return callback new Error("No DXF body supplied")
+    return callback new Error "No DXF body supplied"
 
   options =
     url: config.getConf()['ilr-to-dhis']['dhis2-url'] + '/api/metadata?preheatCache=false'
@@ -307,7 +307,7 @@ postToDhis = (out, dxfData, callback) ->
   request.post options, (err, res, body) ->
     if err
       out.error "Post to DHIS2 failed: #{err}"
-      return callback new Error("Post to DHIS2 failed: #{err}")
+      return callback new Error "Post to DHIS2 failed: #{err}"
 
     out.pushOrchestration
       name: 'DHIS2 Import'
