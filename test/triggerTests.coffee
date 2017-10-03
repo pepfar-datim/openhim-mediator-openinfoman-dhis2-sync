@@ -48,19 +48,19 @@ describe 'Trigger test', ->
       info: (data) -> logger.info data
       error: (data) -> logger.error data
       pushOrchestration: (o) -> logger.info o
-    server.bothTrigger out, (successful) ->
-      successful.should.be.exactly true
+    server.bothTrigger out, (err) ->
+      should.not.exist err
       targetCalled.should.be.exactly true
       done()
 
-  it 'should return with successful false if target responds with a non-200 status code', (done) ->
+  it 'should return with err if target responds with a non-200 status code', (done) ->
     config.getConf()['sync-type']['both-trigger-url'] = 'https://localhost:7124/ILR/CSD/pollService/directory/DATIM-OU-TZ/update_cache'
     out =
       info: (data) -> logger.info data
       error: (data) -> logger.info "[this is expected] #{data}"
       pushOrchestration: (o) -> logger.info o
-    server.bothTrigger out, (successful) ->
-      successful.should.be.exactly false
+    server.bothTrigger out, (err) ->
+      should.exist err
       errorTargetCalled.should.be.exactly true
       done()
 
@@ -71,7 +71,8 @@ describe 'Trigger test', ->
       info: (data) -> logger.info data
       error: (data) -> logger.error data
       pushOrchestration: (o) -> orch.push o
-    server.bothTrigger out, (successful) ->
+    server.bothTrigger out, (err) ->
+      should.not.exist err
       orch.length.should.be.exactly 1
       orch[0].name.should.be.exactly 'Trigger'
       orch[0].request.path.should.be.exactly config.getConf()['sync-type']['both-trigger-url']
