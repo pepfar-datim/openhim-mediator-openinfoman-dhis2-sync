@@ -205,6 +205,7 @@ fetchDXFFromIlr = (out, callback) ->
       cert: nullIfFileNotFound('tls/cert.pem')
       key: nullIfFileNotFound('tls/key.pem')
       ca: nullIfFileNotFound('tls/ca.pem')
+      timeout: 0
 
     if config.getConf()['ilr-to-dhis']['ilr-user'] and config.getConf()['ilr-to-dhis']['ilr-pass']
       ilrOptions.auth =
