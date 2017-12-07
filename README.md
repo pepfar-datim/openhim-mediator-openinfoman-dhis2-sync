@@ -1,6 +1,4 @@
-[![OpenHIM Core](https://img.shields.io/badge/openhim--core-1.4%2B-brightgreen.svg)](http://openhim.readthedocs.org/en/latest/user-guide/versioning.html)
-
-[![Build Status](https://travis-ci.org/jembi/openhim-mediator-openinfoman-dhis2-sync.svg?branch=master)](https://travis-ci.org/jembi/openhim-mediator-openinfoman-dhis2-sync)
+[![OpenHIM Core](https://img.shields.io/badge/openhim--core-1.4%2B-brightgreen.svg)](http://openhim.readthedocs.org/en/latest/user-guide/versioning.html) [![Build Status](https://travis-ci.org/jembi/openhim-mediator-openinfoman-dhis2-sync.svg?branch=master)](https://travis-ci.org/jembi/openhim-mediator-openinfoman-dhis2-sync)
 
 # openhim-mediator-openinfoman-dhis2-sync
 An OpenHIM mediator for syncing DHIS2 organisations with the OpenInfoMan. The mediator will register a default polling channel with the OpenHIM Core that is by default scheduled to run daily at midnight.
