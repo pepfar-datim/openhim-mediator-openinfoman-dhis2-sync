@@ -15,7 +15,7 @@ const bodyParser = require('body-parser');
 const mediatorUtils = require('openhim-mediator-utils');
 const util = require('./util');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const spawn = require('child_process');
 const request = require('request');
 
 const tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync.cfg';
