@@ -1,7 +1,7 @@
 {
   "server": {
     "hostname": "localhost",
-    "port": 5012
+    "port": 5015
   },
   "logger": {
     "level": "error"

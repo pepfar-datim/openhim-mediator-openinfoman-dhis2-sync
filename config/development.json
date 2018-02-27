@@ -1,7 +1,7 @@
 {
   "server": {
     "hostname": "0.0.0.0",
-    "port": 5012
+    "port": 5015
   },
   "logger": {
     "level": "debug"

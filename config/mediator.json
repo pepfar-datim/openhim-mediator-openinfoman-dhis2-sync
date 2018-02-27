@@ -1,29 +1,29 @@
 {
-  "urn": "urn:mediator:openinfoman-dhis2-sync",
+  "urn": "urn:mediator:openinfoman-dhis2-sync-next-gen",
   "version": "3.0.0",
-  "name": "OpenInfoMan-DHIS2 Sync Mediator",
-  "description": "OpenInfoMan-DHIS2 Sync Mediator",
+  "name": "OpenInfoMan-DHIS2 Sync Mediator NextGen",
+  "description": "OpenInfoMan-DHIS2 Sync Mediator for NextGen",
   "endpoints": [
     {
-      "name": "OpenInfoMan-DHIS2 Sync Trigger",
+      "name": "OpenInfoMan-DHIS2 Sync Trigger NextGen",
       "host": "localhost",
-      "port": "5012",
+      "port": "5015",
       "path": "/trigger",
       "type": "http"
     }
   ],
   "defaultChannelConfig": [
     {
-      "name": "OpenInfoMan-DHIS2 Sync",
-      "pollingSchedule" : "0 0 * * *",
+      "name": "OpenInfoMan-DHIS2 Sync NextGen",
+      "pollingSchedule": "0 0 * * *",
       "urlPattern": "^/_infomansync$",
       "type": "polling",
       "allow": ["internal"],
       "routes": [
         {
-          "name": "OpenInfoMan-DHIS2 Sync Trigger",
+          "name": "OpenInfoMan-DHIS2 Sync Trigger NextGen",
           "host": "localhost",
-          "port": "5012",
+          "port": "5015",
           "path": "/trigger",
           "type": "http",
           "primary": "true"
