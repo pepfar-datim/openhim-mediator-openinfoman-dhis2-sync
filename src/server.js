@@ -1,13 +1,10 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
+
 require('./init');
 
 const logger = require('winston');
-const config = require('./config');
+var config = {}; // this will vary depending on whats set in openhim-core
+const apiConf = require('../config/default');
+const mediatorConfig = require('../config/mediator');
 const url = require('url');
 
 const express = require('express');
@@ -30,9 +27,10 @@ const nullIfFileNotFound = function(file) {
 };
 //const clientId = request.get('x-openhim-clientid')
 const clientId = 'adx-adaptor-ug'
+config = mediatorConfig.config;
 let mapping = null
-if (config.getConf().mapping) {
-  config.getConf().mapping.forEach((map) => {
+if (config.mapping) {
+  config.mapping.forEach((map) => {
     if (map.clientID === clientId) {
       mapping = map
     }
@@ -604,7 +602,7 @@ const handler = function(req, res) {
 
     res.set('Content-Type', 'application/json+openhim');
     return res.send({
-      'x-mediator-urn': config.getMediatorConf().urn,
+      'x-mediator-urn': mediatorConfig.urn,
       status: err ? 'Failed' : 'Successful',
       response: {
         status: err ? err.status : 200,
@@ -649,8 +647,8 @@ app.get('/trigger', handler);
 
 let server = null;
 exports.start = function(callback) {
-  server = app.listen(config.getConf().server.port, config.getConf().server.hostname, function() {
-    logger.info(`[${process.env.NODE_ENV}] ${config.getMediatorConf().name} running on port ${server.address().address}:${server.address().port}`);
+  server = app.listen(apiConf.server.port, apiConf.server.hostname, function() {
+    logger.info(`[${process.env.NODE_ENV}] ${mediatorConfig.name} running on port ${server.address().address}:${server.address().port}`);
     if (callback) { return callback(null, server); }
   });
   server.on('error', function(err) {
@@ -660,9 +658,9 @@ exports.start = function(callback) {
 
   if (process.env.NODE_ENV !== 'test') {
     logger.info('Attempting to register mediator with core ...');
-    config.getConf().openhim.api.urn = config.getMediatorConf().urn;
+    apiConf.openhim.api.urn = mediatorConfig.urn;
 
-    return mediatorUtils.registerMediator(config.getConf().openhim.api, config.getMediatorConf(), function(err) {
+    return mediatorUtils.registerMediator(apiConf.openhim.api, mediatorConfig, function(err) {
       if (err) {
         logger.error(err);
         process.exit(1);
@@ -670,20 +668,20 @@ exports.start = function(callback) {
 
       logger.info('Mediator has been successfully registered');
 
-      const configEmitter = mediatorUtils.activateHeartbeat(config.getConf().openhim.api);
+      const configEmitter = mediatorUtils.activateHeartbeat(apiConf.openhim.api);
 
       configEmitter.on('config', function(newConfig) {
         logger.info('Received updated config from core');
-        config.updateConf(newConfig);
+        config=newConfig;
         return saveConfigToFile();
       });
 
       configEmitter.on('error', err => logger.error(err));
 
-      return mediatorUtils.fetchConfig(config.getConf().openhim.api, function(err, newConfig) {
+      return mediatorUtils.fetchConfig(apiConf.openhim.api, function(err, newConfig) {
         if (err) { return logger.error(err); }
         logger.info('Received initial config from core');
-        config.updateConf(newConfig);
+        config=newConfig;
         return saveConfigToFile();
       });
     });
