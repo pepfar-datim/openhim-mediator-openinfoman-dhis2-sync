@@ -3,8 +3,10 @@ require('./init');
 
 const logger = require('winston');
 var config = {}; // this will vary depending on whats set in openhim-core
-const apiConf = require('../config/default');
-const mediatorConfig = require('../config/mediator');
+var clientMap = {};
+const configurations = require('./config');
+var apiConf = require('../config/default');
+var mediatorConfig = require('../config/mediator');
 const url = require('url');
 
 const express = require('express');
@@ -12,10 +14,10 @@ const bodyParser = require('body-parser');
 const mediatorUtils = require('openhim-mediator-utils');
 const util = require('./util');
 const fs = require('fs');
-const spawn = require('child_process');
+const { spawn } = require('child_process');
 const request = require('request');
 
-const tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync.cfg';
+var tmpCfg;
 
 const falseIfEmpty = function(s) { if ((s != null) && (s.trim().length>0)) { return s; } else { return false; } };
 const nullIfFileNotFound = function(file) {
@@ -25,35 +27,25 @@ const nullIfFileNotFound = function(file) {
     return null;
   }
 };
-//const clientId = request.get('x-openhim-clientid')
-const clientId = 'adx-adaptor-ug'
-config = mediatorConfig.config;
-let mapping = null
-if (config.mapping) {
-  config.mapping.forEach((map) => {
-    if (map.clientID === clientId) {
-      mapping = map
-    }
-  })
-}
+
 const cfg = () => `\
 ########################################################################
 # Configuration Options for publish_to_ilr.sh
 ########################################################################
 
-ILR_URL='${mapping.dhis-to-ilr.ilr-url}'
-ILR_USER=${falseIfEmpty(mapping.dhis-to-ilr.ilr-user)}
-ILR_PASS=${falseIfEmpty(mapping.dhis-to-ilr.ilr-pass)}
-ILR_DOC='${mapping.dhis-to-ilr.ilr-doc}'
-DHIS2_URL='${mapping.dhis-to-ilr.dhis2-url}'
+ILR_URL='${clientMap.dhis_to_ilr_ilr_url}'
+ILR_USER=${falseIfEmpty(clientMap.dhis_to_ilr_ilr_user)}
+ILR_PASS=${falseIfEmpty(clientMap.dhis_to_ilr_ilr_pass)}
+ILR_DOC='${clientMap.dhis_to_ilr_ilr_doc}'
+DHIS2_URL='${clientMap.dhis_to_ilr_dhis2_url}'
 DHIS2_EXT_URL=$DHIS2_URL
-DHIS2_USER="${falseIfEmpty(mapping.dhis-to-ilr.dhis2-user)}"
-DHIS2_PASS="${falseIfEmpty(mapping.dhis-to-ilr.dhis2-pass)}"
-DOUSERS=${mapping.dhis-to-ilr.dousers}
-DOSERVICES=${mapping.dhis-to-ilr.dousers}
-IGNORECERTS=${mapping.dhis-to-ilr.ignorecerts}
-LEVELS=${mapping.dhis-to-ilr.levels}
-GROUPCODES=${mapping.dhis-to-ilr.groupcodes}\
+DHIS2_USER="${falseIfEmpty(clientMap.dhis_to_ilr_dhis2_user)}"
+DHIS2_PASS="${falseIfEmpty(clientMap.dhis_to_ilr_dhis2_pass)}"
+DOUSERS=${clientMap.dhis_to_ilr_dousers}
+DOSERVICES=${clientMap.dhis_to_ilr_dousers}
+IGNORECERTS=${clientMap.dhis_to_ilr_ignorecerts}
+LEVELS=${clientMap.dhis_to_ilr_levels}
+GROUPCODES=${clientMap.dhis_to_ilr_groupcodes}\
 ` ;
 
 const saveConfigToFile = function() {
@@ -74,10 +66,10 @@ const buildArgs = function() {
   const args = [];
   args.push(`${appRoot}/resources/publish_to_ilr.sh`);
   args.push(`-c ${tmpCfg}`);
-  if (mapping.dhis-to-ilr.reset) { args.push('-r'); }
-  if (mapping.dhis-to-ilr.publishfull) { args.push('-f'); }
-  if (mapping.dhis-to-ilr.debug) { args.push('-d'); }
-  if (mapping.dhis-to-ilr.empty) { args.push('-e'); }
+  if (clientMap.dhis_to_ilr_reset) { args.push('-r'); }
+  if (clientMap.dhis_to_ilr_publishfull) { args.push('-f'); }
+  if (clientMap.dhis_to_ilr_debug) { args.push('-d'); }
+  if (clientMap.dhis_to_ilr_empty) { args.push('-e'); }
   return args;
 };
 
@@ -121,7 +113,7 @@ const dhisToIlr = function(out, callback) {
 
 const bothTrigger = function(out, callback) {
   const options = {
-    url: mapping.sync-type.both-trigger-url,
+    url: config.sync_type.both_trigger_url,
     cert: nullIfFileNotFound('tls/cert.pem'),
     key: nullIfFileNotFound('tls/key.pem'),
     ca: nullIfFileNotFound('tls/ca.pem'),
@@ -163,16 +155,21 @@ const bothTrigger = function(out, callback) {
 };
 
 const setDHISDataStore = function(namespace, key, data, update, callback) {
+  var query;
+  if (clientMap.instanceID){
+    query = {instanceid: mapping.instanceID};
+    }
   const options = {
-    url: mapping.ilr-to-dhis.dhis2-url + `/api/dataStore/${namespace}/${key}`,
+    url: clientMap.ilr_to_dhis_ilr_dhis2_url + `/api/dataStore/${namespace}/${key}`,
     body: data,
     auth: {
-      username: mapping.ilr-to-dhis.dhis2-user,
-      password: mapping.ilr-to-dhis.dhis2-pass
+      username: clientMap.ilr_to_dhis_ilr_dhis2_user,
+      password: clientMap.ilr_to_dhis_ilr_dhis2_pass
     },
     cert: nullIfFileNotFound('tls/cert.pem'),
     key: nullIfFileNotFound('tls/key.pem'),
     ca: nullIfFileNotFound('tls/ca.pem'),
+    qs: query,
     json: true
   };
 
@@ -195,15 +192,20 @@ const setDHISDataStore = function(namespace, key, data, update, callback) {
 
 
 const getDHISDataStore = function(namespace, key, callback) {
+  var query;
+  if (clientMap.instanceID){
+    query = {instanceid: mapping.instanceID};
+    }
   const options = {
-    url: mapping.ilr-to-dhis.dhis2-url + `/api/dataStore/${namespace}/${key}`,
+    url: clientMap.ilr_to_dhis_ilr_dhis2_url + `/api/dataStore/${namespace}/${key}`,
     auth: {
-      username: mapping.ilr-to-dhis.dhis2-user,
-      password: mapping.ilr-to-dhis.dhis2-pass
+      username: clientMap.ilr_to_dhis_ilr_dhis2_user,
+      password: clientMap.ilr_to_dhis_ilr_dhis2_pass
     },
     cert: nullIfFileNotFound('tls/cert.pem'),
     key: nullIfFileNotFound('tls/key.pem'),
     ca: nullIfFileNotFound('tls/ca.pem'),
+    qs: query,
     json: true
   };
 
@@ -220,11 +222,11 @@ const getDHISDataStore = function(namespace, key, callback) {
 
 // Fetch last import timestamp and create if it doesn't exist
 const fetchLastImportTs = callback =>
-  getDHISDataStore('CSD-Loader-Last-Import', mapping.ilr-to-dhis.ilr-doc, function(err, data) {
+  getDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_ilr_doc, function(err, data) {
     if (err) {
       logger.info('Could not find last updated timestamp, creating one.');
       const date = new Date(0);
-      return setDHISDataStore('CSD-Loader-Last-Import', mapping.ilr-to-dhis.ilr-doc, {value: date}, false, function(err) {
+      return setDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_ilr_doc, {value: date}, false, function(err) {
         if (err) { return callback(new Error(`Could not write last export to DHIS2 datastore ${err.stack}`)); }
         return callback(null, date.toISOString());
       });
@@ -241,7 +243,7 @@ const fetchDXFFromIlr = (out, callback) =>
     if (err) { return callback(err); }
 
     const ilrOptions = {
-      url: `${mapping.ilr-to-dhis.ilr-url}/csr/${mapping.ilr-to-dhis.ilr-doc}/careServicesRequest/urn:dhis.org:transform_to_dxf:${mapping.ilr-to-dhis.dhis2-version}`,
+      url: `${clientMap.ilr_to_dhis_ilr_ilr_url}/csr/${clientMap.ilr_to_dhis_ilr_ilr_doc}/careServicesRequest/urn:dhis.org:transform_to_dxf:${clientMap.ilr_to_dhis_ilr_dhis2_version}`,
       body: `<csd:requestParams xmlns:csd='urn:ihe:iti:csd:2013'>
   <processUsers value='0'/>
   <preserveUUIDs value='1'/>
@@ -258,10 +260,10 @@ const fetchDXFFromIlr = (out, callback) =>
       timeout: 0
 };
 
-    if (mapping.ilr-to-dhis.ilr-user && mapping.ilr-to-dhis.ilr-pass) {
+    if (clientMap.ilr_to_dhis_ilr_ilr_user && clientMap.ilr_to_dhis_ilr_ilr_pass) {
       ilrOptions.auth = {
-        user: mapping.ilr-to-dhis.ilr-user,
-        pass: mapping.ilr-to-dhis.ilr-pass
+        user: clientMap.ilr_to_dhis_ilr_ilr_user,
+        pass: clientMap.ilr_to_dhis_ilr_ilr_pass
       };
     }
 
@@ -294,7 +296,7 @@ const fetchDXFFromIlr = (out, callback) =>
         }
       });
 
-      setDHISDataStore('CSD-Loader-Last-Import', mapping.ilr-to-dhis.ilr-doc, {value: beforeTimestamp}, true, function(err) {
+      setDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_ilr_doc, {value: beforeTimestamp}, true, function(err) {
         if (err) { return logger.error(`Failed to set last import date in DHIS2 datastore ${err}`); }
       });
       return callback(null, body);
@@ -304,7 +306,7 @@ const fetchDXFFromIlr = (out, callback) =>
 
 const sendAsyncDhisImportResponseToReceiver = function(out, res, callback) {
   const options = {
-    url: mapping.ilr-to-dhis.dhis2-async-receiver-url,
+    url: clientMap.ilr_to_dhis_ilr_dhis2_async_receiver_url,
     body: res.body,
     headers: {
       'content-type': res.headers['content-type']
@@ -361,22 +363,26 @@ const postToDhis = function(out, dxfData, callback) {
     out.info("No DXF body supplied");
     return callback(new Error("No DXF body supplied"));
   }
-
+  var query;
+  if (clientMap.instanceID){
+    query = {instanceid: mapping.instanceID};
+    }
   const options = {
-    url: mapping.ilr-to-dhis.dhis2-url + '/api/metadata?preheatCache=false',
+    url: clientMap.ilr_to_dhis_ilr_dhis2_url + '/api/metadata?preheatCache=false',
     body: dxfData,
     method: 'POST',
     auth: {
-      username: mapping.ilr-to-dhis.dhis2-user,
-      password: mapping.ilr-to-dhis.dhis2-pass
+      username: clientMap.ilr_to_dhis_ilr_dhis2_user,
+      password: clientMap.ilr_to_dhis_ilr_dhis2_pass
     },
     cert: nullIfFileNotFound('tls/cert.pem'),
     key: nullIfFileNotFound('tls/key.pem'),
     ca: nullIfFileNotFound('tls/ca.pem'),
+    qs: query,
     timeout: 0,
     headers: { 'content-type': 'application/xml' }
   };
-  if (mapping.ilr-to-dhis.dhis2-async) {
+  if (clientMap.ilr_to_dhis_ilr_dhis2_async) {
     options.qs = {async: true};
   }
 
@@ -406,9 +412,9 @@ const postToDhis = function(out, dxfData, callback) {
     out.info(`Response: [${res.statusCode}] ${body}`);
 
     if (200 <= res.statusCode && res.statusCode <= 399) {
-      if (mapping.ilr-to-dhis.dhis2-async) {
-        const period = mapping.ilr-to-dhis.dhis2-poll-period;
-        const timeout = mapping.ilr-to-dhis.dhis2-poll-timeout;
+      if (clientMap.ilr_to_dhis_ilr_dhis2_async) {
+        const period = clientMap.ilr_to_dhis_ilr_dhis2_poll-period;
+        const timeout = clientMap.ilr_to_dhis_ilr_dhis2_poll-timeout;
         // send out async polling request
         return pollTask(out, 'sites import', 'METADATA_IMPORT', period, timeout, function(err) {
           if (err) { return callback(err); }
@@ -430,16 +436,21 @@ var pollTask = function(out, orchName, task, period, timeout, callback) {
   let interval;
   let pollNum = 0;
   const beforeTimestamp = new Date();
+  var query;
+  if (clientMap.instanceID){
+    query = {instanceid: mapping.instanceID};
+    }
   return interval = setInterval(function() {
     const options = {
-      url: mapping.ilr-to-dhis.dhis2-url + '/api/system/tasks/' + task,
+      url: clientMap.ilr_to_dhis_ilr_dhis2_url + '/api/system/tasks/' + task,
       auth: {
-        username: mapping.ilr-to-dhis.dhis2-user,
-        password: mapping.ilr-to-dhis.dhis2-pass
+        username: clientMap.ilr_to_dhis_ilr_dhis2_user,
+        password: clientMap.ilr_to_dhis_ilr_dhis2_pass
       },
       cert: nullIfFileNotFound('tls/cert.pem'),
       key: nullIfFileNotFound('tls/key.pem'),
       ca: nullIfFileNotFound('tls/ca.pem'),
+      qs: query,
       json: true
     };
     return request.get(options, function(err, res, tasks) {
@@ -486,16 +497,21 @@ var pollTask = function(out, orchName, task, period, timeout, callback) {
 
 // initiate a resource table rebuild task on DHIS and wait for the task to complete
 const rebuildDHIS2resourceTable = function(out, callback) {
+  var query;
+  if (clientMap.instanceID){
+    query = {instanceid: mapping.instanceID};
+    }
   const options = {
-    url: mapping.ilr-to-dhis.dhis2-url + '/api/resourceTables',
+    url: clientMap.ilr_to_dhis_ilr_dhis2_url + '/api/resourceTables',
     method: 'POST',
     auth: {
-      username: mapping.ilr-to-dhis.dhis2-user,
-      password: mapping.ilr-to-dhis.dhis2-pass
+      username: clientMap.ilr_to_dhis_ilr_dhis2_user,
+      password: clientMap.ilr_to_dhis_ilr_dhis2_pass
     },
     cert: nullIfFileNotFound('tls/cert.pem'),
     key: nullIfFileNotFound('tls/key.pem'),
-    ca: nullIfFileNotFound('tls/ca.pem')
+    ca: nullIfFileNotFound('tls/ca.pem'),
+    qs: query
   };
 
   const beforeTimestamp = new Date();
@@ -523,8 +539,8 @@ const rebuildDHIS2resourceTable = function(out, callback) {
 
     out.info(`Response: [${res.statusCode}] ${body}`);
     if (res.statusCode === 200) {
-      const period = mapping.ilr-to-dhis.dhis2-poll-period;
-      const timeout = mapping.ilr-to-dhis.dhis2-poll-timeout;
+      const period = clientMap.ilr_to_dhis_ilr_dhis2_poll_period;
+      const timeout = clientMap.ilr_to_dhis_ilr_dhis2_poll_timeout;
       return pollTask(out, 'resource rebuild', 'RESOURCETABLE_UPDATE', period, timeout, function(err) {
         if (err) { return callback(err); }
 
@@ -543,7 +559,7 @@ const ilrToDhis = (out, callback) =>
     if (err) { return callback(err); }
     return postToDhis(out, dxf, function(err) {
       if (!err) {
-        if (mapping.ilr-to-dhis.dhis2-rebuild-resources) {
+        if (clientMap.ilr_to_dhis_ilr_dhis2_rebuild_resources) {
           return rebuildDHIS2resourceTable(out, function(err) {
             if (err) { return callback(err); }
             return callback();
@@ -562,6 +578,20 @@ const ilrToDhis = (out, callback) =>
 const handler = function(req, res) {
   const openhimTransactionID = req.headers['x-openhim-transactionid'];
 
+  const clientId = req.headers['x-openhim-clientid'];
+//const clientId = 'adx-adaptor-ug'
+tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync-' + clientId + '.cfg';
+config = mediatorConfig.config;
+if (config.mapping) {
+  config.mapping.forEach((map) => {
+    if (map.clientID === clientId) {
+      clientMap = map
+    }
+  })
+}
+
+
+saveConfigToFile();
   const { query } = url.parse(req.url, true);
   let adxAdapterID = null;
   if (query.adxAdapterID) {
@@ -593,7 +623,7 @@ const handler = function(req, res) {
   };
   const out = _out();
 
-  out.info(`Running sync with mode ${mapping.sync-type.mode} ...`);
+  out.info(`Running sync with mode ${config.sync_type.mode} ...`);
 
   const end = function(err) {
     if (err && !err.status) {
@@ -616,16 +646,16 @@ const handler = function(req, res) {
     });
   };
 
-  if (mapping.sync-type.mode === 'DHIS2 to ILR') {
+  if (config.sync_type.mode === 'DHIS2 to ILR') {
     return dhisToIlr(out, end);
-  } else if (mapping.sync-type.mode === 'ILR to DHIS2') {
+  } else if (config.sync_type.mode === 'ILR to DHIS2') {
     return ilrToDhis(out, end);
   } else {
     return dhisToIlr(out, function(err) {
       if (err) { return end(err); }
 
       const next = () => ilrToDhis(out, end);
-      if (mapping.sync-type.both-trigger-enabled) {
+      if (config.sync_type.both-trigger-enabled) {
         return bothTrigger(out, function(err) {
           if (err) { return end(err); }
           return next();
@@ -666,27 +696,31 @@ exports.start = function(callback) {
         process.exit(1);
       }
 
-      logger.info('Mediator has been successfully registered');
 
       const configEmitter = mediatorUtils.activateHeartbeat(apiConf.openhim.api);
 
       configEmitter.on('config', function(newConfig) {
-        logger.info('Received updated config from core');
-        config=newConfig;
-        return saveConfigToFile();
+        // configurations.updateConf(newApiConfig);
+        // apiConf = configurations.getConf();
+        // mediatorConfig = configurations.getMediatorConf();
+        // return logger.info('Received updated config from core');
       });
 
       configEmitter.on('error', err => logger.error(err));
 
       return mediatorUtils.fetchConfig(apiConf.openhim.api, function(err, newConfig) {
         if (err) { return logger.error(err); }
-        logger.info('Received initial config from core');
-        config=newConfig;
-        return saveConfigToFile();
+        // configurations.updateConf(newConfig);
+        // apiConf = configurations.getConf();
+        // mediatorConfig = configurations.getMediatorConf();
+        // return logger.info('Received initial config from core');
       });
+      return logger.info('Mediator has been successfully registered');
+
     });
   }
 };
+
 
 exports.stop = callback =>
   server.close(function() {
