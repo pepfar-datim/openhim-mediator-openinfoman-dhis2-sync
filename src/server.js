@@ -157,7 +157,7 @@ const bothTrigger = function(out, callback) {
 const setDHISDataStore = function(namespace, key, data, update, callback) {
   var query;
   if (clientMap.instanceID){
-    query = {instanceid: mapping.instanceID};
+    query = {instanceid: clientMap.instanceID};
     }
   const options = {
     url: clientMap.ilr_to_dhis_ilr_dhis2_url + `/api/dataStore/${namespace}/${key}`,
@@ -194,7 +194,7 @@ const setDHISDataStore = function(namespace, key, data, update, callback) {
 const getDHISDataStore = function(namespace, key, callback) {
   var query;
   if (clientMap.instanceID){
-    query = {instanceid: mapping.instanceID};
+    query = {instanceid: clientMap.instanceID};
     }
   const options = {
     url: clientMap.ilr_to_dhis_ilr_dhis2_url + `/api/dataStore/${namespace}/${key}`,
@@ -222,11 +222,11 @@ const getDHISDataStore = function(namespace, key, callback) {
 
 // Fetch last import timestamp and create if it doesn't exist
 const fetchLastImportTs = callback =>
-  getDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_ilr_doc, function(err, data) {
+  getDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_doc, function(err, data) {
     if (err) {
       logger.info('Could not find last updated timestamp, creating one.');
       const date = new Date(0);
-      return setDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_ilr_doc, {value: date}, false, function(err) {
+      return setDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_doc, {value: date}, false, function(err) {
         if (err) { return callback(new Error(`Could not write last export to DHIS2 datastore ${err.stack}`)); }
         return callback(null, date.toISOString());
       });
@@ -243,7 +243,7 @@ const fetchDXFFromIlr = (out, callback) =>
     if (err) { return callback(err); }
 
     const ilrOptions = {
-      url: `${clientMap.ilr_to_dhis_ilr_ilr_url}/csr/${clientMap.ilr_to_dhis_ilr_ilr_doc}/careServicesRequest/urn:dhis.org:transform_to_dxf:${clientMap.ilr_to_dhis_ilr_dhis2_version}`,
+      url: `${clientMap.ilr_to_dhis_ilr_url}/csr/${clientMap.ilr_to_dhis_ilr_doc}/careServicesRequest/urn:dhis.org:transform_to_dxf:${clientMap.ilr_to_dhis_ilr_dhis2_version}`,
       body: `<csd:requestParams xmlns:csd='urn:ihe:iti:csd:2013'>
   <processUsers value='0'/>
   <preserveUUIDs value='1'/>
@@ -260,10 +260,10 @@ const fetchDXFFromIlr = (out, callback) =>
       timeout: 0
 };
 
-    if (clientMap.ilr_to_dhis_ilr_ilr_user && clientMap.ilr_to_dhis_ilr_ilr_pass) {
+    if (clientMap.ilr_to_dhis_ilr_dhis2_user && clientMap.ilr_to_dhis_ilr_dhis2_pass) {
       ilrOptions.auth = {
-        user: clientMap.ilr_to_dhis_ilr_ilr_user,
-        pass: clientMap.ilr_to_dhis_ilr_ilr_pass
+        user: clientMap.ilr_to_dhis_ilr_dhis2_user,
+        pass: clientMap.ilr_to_dhis_ilr_dhis2_pass
       };
     }
 
@@ -296,7 +296,7 @@ const fetchDXFFromIlr = (out, callback) =>
         }
       });
 
-      setDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_ilr_doc, {value: beforeTimestamp}, true, function(err) {
+      setDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_doc, {value: beforeTimestamp}, true, function(err) {
         if (err) { return logger.error(`Failed to set last import date in DHIS2 datastore ${err}`); }
       });
       return callback(null, body);
@@ -365,7 +365,7 @@ const postToDhis = function(out, dxfData, callback) {
   }
   var query;
   if (clientMap.instanceID){
-    query = {instanceid: mapping.instanceID};
+    query = {instanceid: clientMap.instanceID};
     }
   const options = {
     url: clientMap.ilr_to_dhis_ilr_dhis2_url + '/api/metadata?preheatCache=false',
@@ -413,8 +413,8 @@ const postToDhis = function(out, dxfData, callback) {
 
     if (200 <= res.statusCode && res.statusCode <= 399) {
       if (clientMap.ilr_to_dhis_ilr_dhis2_async) {
-        const period = clientMap.ilr_to_dhis_ilr_dhis2_poll-period;
-        const timeout = clientMap.ilr_to_dhis_ilr_dhis2_poll-timeout;
+        const period = clientMap.ilr_to_dhis_ilr_dhis2_poll_period;
+        const timeout = clientMap.ilr_to_dhis_ilr_dhis2_poll_timeout;
         // send out async polling request
         return pollTask(out, 'sites import', 'METADATA_IMPORT', period, timeout, function(err) {
           if (err) { return callback(err); }
@@ -438,7 +438,7 @@ var pollTask = function(out, orchName, task, period, timeout, callback) {
   const beforeTimestamp = new Date();
   var query;
   if (clientMap.instanceID){
-    query = {instanceid: mapping.instanceID};
+    query = {instanceid: clientMap.instanceID};
     }
   return interval = setInterval(function() {
     const options = {
@@ -499,7 +499,7 @@ var pollTask = function(out, orchName, task, period, timeout, callback) {
 const rebuildDHIS2resourceTable = function(out, callback) {
   var query;
   if (clientMap.instanceID){
-    query = {instanceid: mapping.instanceID};
+    query = {instanceid: clientMap.instanceID};
     }
   const options = {
     url: clientMap.ilr_to_dhis_ilr_dhis2_url + '/api/resourceTables',
@@ -655,7 +655,7 @@ saveConfigToFile();
       if (err) { return end(err); }
 
       const next = () => ilrToDhis(out, end);
-      if (config.sync_type.both-trigger-enabled) {
+      if (config.sync_type.both_trigger_enabled) {
         return bothTrigger(out, function(err) {
           if (err) { return end(err); }
           return next();
@@ -700,20 +700,12 @@ exports.start = function(callback) {
       const configEmitter = mediatorUtils.activateHeartbeat(apiConf.openhim.api);
 
       configEmitter.on('config', function(newConfig) {
-        // configurations.updateConf(newApiConfig);
-        // apiConf = configurations.getConf();
-        // mediatorConfig = configurations.getMediatorConf();
-        // return logger.info('Received updated config from core');
       });
 
       configEmitter.on('error', err => logger.error(err));
 
       return mediatorUtils.fetchConfig(apiConf.openhim.api, function(err, newConfig) {
         if (err) { return logger.error(err); }
-        // configurations.updateConf(newConfig);
-        // apiConf = configurations.getConf();
-        // mediatorConfig = configurations.getMediatorConf();
-        // return logger.info('Received initial config from core');
       });
       return logger.info('Mediator has been successfully registered');
 
