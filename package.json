@@ -1,7 +1,7 @@
 {
-  "name": "openhim-mediator-openinfoman-dhis2-sync",
-  "version": "3.0.0",
-  "description": "OpenInfoMan-DHIS2 Sync Mediator",
+  "name": "openhim-mediator-openinfoman-dhis2-sync-next-gen",
+  "version": "4.0.0",
+  "description": "OpenInfoMan-DHIS2 Sync Mediator for NextGen",
   "scripts": {
     "start": "node src/server.js"
   },
