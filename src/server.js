@@ -2,11 +2,10 @@
 require('./init');
 
 const logger = require('winston');
-var config = {}; // this will vary depending on whats set in openhim-core
-var clientMap = {};
+let config = {}; // this will vary depending on whats set in openhim-core
 const configurations = require('./config');
-var apiConf = require('../config/default');
-var mediatorConfig = require('../config/mediator');
+const apiConf = configurations.getConf();
+const mediatorConfig = configurations.getMediatorConf();
 const url = require('url');
 
 const express = require('express');
@@ -17,7 +16,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const request = require('request');
 
-var tmpCfg;
+let tmpCfg;
 
 const falseIfEmpty = function(s) { if ((s != null) && (s.trim().length>0)) { return s; } else { return false; } };
 const nullIfFileNotFound = function(file) {
@@ -28,7 +27,7 @@ const nullIfFileNotFound = function(file) {
   }
 };
 
-const cfg = () => `\
+const cfg = (clientMap) => `\
 ########################################################################
 # Configuration Options for publish_to_ilr.sh
 ########################################################################
@@ -48,8 +47,8 @@ LEVELS=${clientMap.dhis_to_ilr_levels}
 GROUPCODES=${clientMap.dhis_to_ilr_groupcodes}\
 ` ;
 
-const saveConfigToFile = function() {
-  const cfgStr = cfg();
+const saveConfigToFile = function(clientMap) {
+  const cfgStr = cfg(clientMap);
   logger.debug(`Config to save:\n${cfgStr}`);
   return fs.writeFile(tmpCfg, cfgStr, function(err) {
     if (err) {
@@ -62,7 +61,7 @@ const saveConfigToFile = function() {
 };
 
 
-const buildArgs = function() {
+const buildArgs = function(clientMap) {
   const args = [];
   args.push(`${appRoot}/resources/publish_to_ilr.sh`);
   args.push(`-c ${tmpCfg}`);
@@ -73,9 +72,9 @@ const buildArgs = function() {
   return args;
 };
 
-const dhisToIlr = function(out, callback) {
+const dhisToIlr = function(out, clientMap, callback) {
   out.info("Running dhis-to-ilr ...");
-  const args = buildArgs();
+  const args = buildArgs(clientMap);
   const beforeTimestamp = new Date();
   const script = spawn('bash', args);
   out.info(`Executing bash script ${args.join(' ')}`);
@@ -154,13 +153,13 @@ const bothTrigger = function(out, callback) {
   });
 };
 
-const setDHISDataStore = function(namespace, key, data, update, callback) {
-  var query;
+const setDHISDataStore = function(namespace, data, update, clientMap, callback) {
+  let query;
   if (clientMap.instanceID){
     query = {instanceid: clientMap.instanceID};
     }
   const options = {
-    url: clientMap.ilr_to_dhis_ilr_dhis2_url + `/api/dataStore/${namespace}/${key}`,
+    url: clientMap.ilr_to_dhis_ilr_dhis2_url + `/api/dataStore/${namespace}/${clientMap.ilr_to_dhis_ilr_doc}`,
     body: data,
     auth: {
       username: clientMap.ilr_to_dhis_ilr_dhis2_user,
@@ -191,13 +190,13 @@ const setDHISDataStore = function(namespace, key, data, update, callback) {
 };
 
 
-const getDHISDataStore = function(namespace, key, callback) {
-  var query;
+const getDHISDataStore = function(namespace, clientMap, callback) {
+  let query;
   if (clientMap.instanceID){
     query = {instanceid: clientMap.instanceID};
     }
   const options = {
-    url: clientMap.ilr_to_dhis_ilr_dhis2_url + `/api/dataStore/${namespace}/${key}`,
+    url: clientMap.ilr_to_dhis_ilr_dhis2_url + `/api/dataStore/${namespace}/${clientMap.ilr_to_dhis_ilr_doc}`,
     auth: {
       username: clientMap.ilr_to_dhis_ilr_dhis2_user,
       password: clientMap.ilr_to_dhis_ilr_dhis2_pass
@@ -221,12 +220,12 @@ const getDHISDataStore = function(namespace, key, callback) {
 };
 
 // Fetch last import timestamp and create if it doesn't exist
-const fetchLastImportTs = callback =>
-  getDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_doc, function(err, data) {
+const fetchLastImportTs = (callback, clientMap) =>
+  getDHISDataStore('CSD-Loader-Last-Import', clientMap, function(err, data) {
     if (err) {
       logger.info('Could not find last updated timestamp, creating one.');
       const date = new Date(0);
-      return setDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_doc, {value: date}, false, function(err) {
+      return setDHISDataStore('CSD-Loader-Last-Import', {value: date}, false, clientMap, function(err) {
         if (err) { return callback(new Error(`Could not write last export to DHIS2 datastore ${err.stack}`)); }
         return callback(null, date.toISOString());
       });
@@ -237,8 +236,8 @@ const fetchLastImportTs = callback =>
 ;
 
 // Fetch DXF from ILR (openinfoman)
-const fetchDXFFromIlr = (out, callback) =>
-  fetchLastImportTs(function(err, lastImport) {
+const fetchDXFFromIlr = (out, clientMap, callback) =>
+  fetchLastImportTs(function(err, clientMap, lastImport) {
     let ilrReq;
     if (err) { return callback(err); }
 
@@ -296,7 +295,8 @@ const fetchDXFFromIlr = (out, callback) =>
         }
       });
 
-      setDHISDataStore('CSD-Loader-Last-Import', clientMap.ilr_to_dhis_ilr_doc, {value: beforeTimestamp}, true, function(err) {
+      setDHISDataStore('CSD-Loader-Last-Import', {value: beforeTimestamp}, true, 
+     clientMap, function(err) {
         if (err) { return logger.error(`Failed to set last import date in DHIS2 datastore ${err}`); }
       });
       return callback(null, body);
@@ -304,7 +304,7 @@ const fetchDXFFromIlr = (out, callback) =>
   })
 ;
 
-const sendAsyncDhisImportResponseToReceiver = function(out, res, callback) {
+const sendAsyncDhisImportResponseToReceiver = function(out, res, clientMap, callback) {
   const options = {
     url: clientMap.ilr_to_dhis_ilr_dhis2_async_receiver_url,
     body: res.body,
@@ -358,12 +358,12 @@ const sendAsyncDhisImportResponseToReceiver = function(out, res, callback) {
 };
 
 // post DXF data to DHIS2 api
-const postToDhis = function(out, dxfData, callback) {
+const postToDhis = function(out, dxfData, clientMap, callback) {
   if (!dxfData) {
     out.info("No DXF body supplied");
     return callback(new Error("No DXF body supplied"));
   }
-  var query;
+  let query;
   if (clientMap.instanceID){
     query = {instanceid: clientMap.instanceID};
     }
@@ -416,10 +416,10 @@ const postToDhis = function(out, dxfData, callback) {
         const period = clientMap.ilr_to_dhis_ilr_dhis2_poll_period;
         const timeout = clientMap.ilr_to_dhis_ilr_dhis2_poll_timeout;
         // send out async polling request
-        return pollTask(out, 'sites import', 'METADATA_IMPORT', period, timeout, function(err) {
+        return pollTask(out, 'sites import', 'METADATA_IMPORT', period, timeout, clientMap, function(err) {
           if (err) { return callback(err); }
 
-          return sendAsyncDhisImportResponseToReceiver(out, res, callback);
+          return sendAsyncDhisImportResponseToReceiver(out, res, clientMap, callback);
         });
       } else {
         return callback();
@@ -432,11 +432,11 @@ const postToDhis = function(out, dxfData, callback) {
 };
 
 // Poll DHIS2 task, period and timeout are in ms
-var pollTask = function(out, orchName, task, period, timeout, callback) {
+var pollTask = function(out, orchName, task, period, timeout, clientMap, callback) {
   let interval;
   let pollNum = 0;
   const beforeTimestamp = new Date();
-  var query;
+  let query;
   if (clientMap.instanceID){
     query = {instanceid: clientMap.instanceID};
     }
@@ -496,8 +496,8 @@ var pollTask = function(out, orchName, task, period, timeout, callback) {
 };
 
 // initiate a resource table rebuild task on DHIS and wait for the task to complete
-const rebuildDHIS2resourceTable = function(out, callback) {
-  var query;
+const rebuildDHIS2resourceTable = function(out, clientMap, callback) {
+  let query;
   if (clientMap.instanceID){
     query = {instanceid: clientMap.instanceID};
     }
@@ -541,7 +541,7 @@ const rebuildDHIS2resourceTable = function(out, callback) {
     if (res.statusCode === 200) {
       const period = clientMap.ilr_to_dhis_ilr_dhis2_poll_period;
       const timeout = clientMap.ilr_to_dhis_ilr_dhis2_poll_timeout;
-      return pollTask(out, 'resource rebuild', 'RESOURCETABLE_UPDATE', period, timeout, function(err) {
+      return pollTask(out, 'resource rebuild', 'RESOURCETABLE_UPDATE', period, timeout, clientMap, function(err) {
         if (err) { return callback(err); }
 
         return callback();
@@ -554,13 +554,13 @@ const rebuildDHIS2resourceTable = function(out, callback) {
 };
 
 
-const ilrToDhis = (out, callback) =>
-  fetchDXFFromIlr(out, function(err, dxf) {
+const ilrToDhis = (out, clientMap, callback) =>
+  fetchDXFFromIlr(out, clientMap, function(err, dxf) {
     if (err) { return callback(err); }
-    return postToDhis(out, dxf, function(err) {
+    return postToDhis(out, dxf, clientMap, function(err) {
       if (!err) {
         if (clientMap.ilr_to_dhis_ilr_dhis2_rebuild_resources) {
-          return rebuildDHIS2resourceTable(out, function(err) {
+          return rebuildDHIS2resourceTable(out, clientMap, function(err) {
             if (err) { return callback(err); }
             return callback();
           });
@@ -579,9 +579,9 @@ const handler = function(req, res) {
   const openhimTransactionID = req.headers['x-openhim-transactionid'];
 
   const clientId = req.headers['x-openhim-clientid'];
-//const clientId = 'adx-adaptor-ug'
 tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync-' + clientId + '.cfg';
 config = mediatorConfig.config;
+let clientMap = {};
 if (config.mapping) {
   config.mapping.forEach((map) => {
     if (map.clientID === clientId) {
@@ -591,7 +591,7 @@ if (config.mapping) {
 }
 
 
-saveConfigToFile();
+saveConfigToFile(clientMap);
   const { query } = url.parse(req.url, true);
   let adxAdapterID = null;
   if (query.adxAdapterID) {
@@ -647,14 +647,14 @@ saveConfigToFile();
   };
 
   if (config.sync_type.mode === 'DHIS2 to ILR') {
-    return dhisToIlr(out, end);
+    return dhisToIlr(out, clientMap, end);
   } else if (config.sync_type.mode === 'ILR to DHIS2') {
-    return ilrToDhis(out, end);
+    return ilrToDhis(out, clientMap ,end);
   } else {
-    return dhisToIlr(out, function(err) {
+    return dhisToIlr(out, clientMap, function(err) {
       if (err) { return end(err); }
 
-      const next = () => ilrToDhis(out, end);
+      const next = () => ilrToDhis(out, clientMap, end);
       if (config.sync_type.both_trigger_enabled) {
         return bothTrigger(out, function(err) {
           if (err) { return end(err); }
