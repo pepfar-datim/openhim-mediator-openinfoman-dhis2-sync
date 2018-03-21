@@ -2,10 +2,7 @@
 require('./init');
 
 const logger = require('winston');
-let config = {}; // this will vary depending on whats set in openhim-core
-const configurations = require('./config');
-const apiConf = configurations.getConf();
-const mediatorConfig = configurations.getMediatorConf();
+const config = require('./config');
 const url = require('url');
 
 const express = require('express');
@@ -15,8 +12,6 @@ const util = require('./util');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const request = require('request');
-
-let tmpCfg;
 
 const falseIfEmpty = function(s) { if ((s != null) && (s.trim().length>0)) { return s; } else { return false; } };
 const nullIfFileNotFound = function(file) {
@@ -47,21 +42,24 @@ LEVELS=${clientMap.dhis_to_ilr_levels}
 GROUPCODES=${clientMap.dhis_to_ilr_groupcodes}\
 ` ;
 
-const saveConfigToFile = function(clientMap) {
-  const cfgStr = cfg(clientMap);
-  logger.debug(`Config to save:\n${cfgStr}`);
-  return fs.writeFile(tmpCfg, cfgStr, function(err) {
-    if (err) {
-      logger.error(err);
-      return process.exit(1);
-    } else {
-      return logger.debug(`Saved config to ${tmpCfg}`);
-    }
-  });
-};
+const saveConfigToFile = function() {
+ const mapping = config.getConf().mapping;
+  mapping.forEach((map) => {
+    const cfgStr = cfg(map);
+    logger.debug(`Config to save:\n${cfgStr}`);
+    const tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync-' + map.clientID + '.cfg';
+     fs.writeFile(tmpCfg, cfgStr, function(err) {
+      if (err) {
+        logger.error(err);
+        return process.exit(1);
+      } else {
+         logger.debug(`Saved config to ${tmpCfg}`);
+      }
+    });
+});
+}
 
-
-const buildArgs = function(clientMap) {
+const buildArgs = function(clientMap, tmpCfg) {
   const args = [];
   args.push(`${appRoot}/resources/publish_to_ilr.sh`);
   args.push(`-c ${tmpCfg}`);
@@ -72,9 +70,9 @@ const buildArgs = function(clientMap) {
   return args;
 };
 
-const dhisToIlr = function(out, clientMap, callback) {
+const dhisToIlr = function(out, clientMap, tmpCfg, callback) {
   out.info("Running dhis-to-ilr ...");
-  const args = buildArgs(clientMap);
+  const args = buildArgs(clientMap, tmpCfg);
   const beforeTimestamp = new Date();
   const script = spawn('bash', args);
   out.info(`Executing bash script ${args.join(' ')}`);
@@ -111,8 +109,9 @@ const dhisToIlr = function(out, clientMap, callback) {
 
 
 const bothTrigger = function(out, callback) {
+  //let config = config.getMediatorConf().config;
   const options = {
-    url: config.sync_type.both_trigger_url,
+    url: config.getMediatorConf().config.sync_type.both_trigger_url,
     cert: nullIfFileNotFound('tls/cert.pem'),
     key: nullIfFileNotFound('tls/key.pem'),
     ca: nullIfFileNotFound('tls/ca.pem'),
@@ -220,7 +219,7 @@ const getDHISDataStore = function(namespace, clientMap, callback) {
 };
 
 // Fetch last import timestamp and create if it doesn't exist
-const fetchLastImportTs = (callback, clientMap) =>
+const fetchLastImportTs = function(clientMap, callback) {
   getDHISDataStore('CSD-Loader-Last-Import', clientMap, function(err, data) {
     if (err) {
       logger.info('Could not find last updated timestamp, creating one.');
@@ -233,11 +232,12 @@ const fetchLastImportTs = (callback, clientMap) =>
       return callback(null, data.value);
     }
   })
+}
 ;
 
 // Fetch DXF from ILR (openinfoman)
-const fetchDXFFromIlr = (out, clientMap, callback) =>
-  fetchLastImportTs(function(err, clientMap, lastImport) {
+const fetchDXFFromIlr = function(clientMap, out, callback){
+  fetchLastImportTs(clientMap, function(err, lastImport) {
     let ilrReq;
     if (err) { return callback(err); }
 
@@ -302,7 +302,7 @@ const fetchDXFFromIlr = (out, clientMap, callback) =>
       return callback(null, body);
     });
   })
-;
+};
 
 const sendAsyncDhisImportResponseToReceiver = function(out, res, clientMap, callback) {
   const options = {
@@ -555,7 +555,7 @@ const rebuildDHIS2resourceTable = function(out, clientMap, callback) {
 
 
 const ilrToDhis = (out, clientMap, callback) =>
-  fetchDXFFromIlr(out, clientMap, function(err, dxf) {
+  fetchDXFFromIlr(clientMap, out, function(err, dxf) {
     if (err) { return callback(err); }
     return postToDhis(out, dxf, clientMap, function(err) {
       if (!err) {
@@ -579,11 +579,11 @@ const handler = function(req, res) {
   const openhimTransactionID = req.headers['x-openhim-transactionid'];
 
   const clientId = req.headers['x-openhim-clientid'];
-tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync-' + clientId + '.cfg';
-config = mediatorConfig.config;
+let clientTmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync-' + clientId + '.cfg';
+const mapping = config.getConf().mapping;
 let clientMap = {};
-if (config.mapping) {
-  config.mapping.forEach((map) => {
+if (mapping) {
+  mapping.forEach((map) => {
     if (map.clientID === clientId) {
       clientMap = map
     }
@@ -591,7 +591,6 @@ if (config.mapping) {
 }
 
 
-saveConfigToFile(clientMap);
   const { query } = url.parse(req.url, true);
   let adxAdapterID = null;
   if (query.adxAdapterID) {
@@ -623,7 +622,7 @@ saveConfigToFile(clientMap);
   };
   const out = _out();
 
-  out.info(`Running sync with mode ${config.sync_type.mode} ...`);
+  out.info(`Running sync with mode ${config.getMediatorConf().config.sync_type.mode} ...`);
 
   const end = function(err) {
     if (err && !err.status) {
@@ -632,7 +631,8 @@ saveConfigToFile(clientMap);
 
     res.set('Content-Type', 'application/json+openhim');
     return res.send({
-      'x-mediator-urn': mediatorConfig.urn,
+      //'x-mediator-urn': config.getMediatorConf().urn,
+      'x-mediator-urn': config.getMediatorConf().urn,
       status: err ? 'Failed' : 'Successful',
       response: {
         status: err ? err.status : 200,
@@ -646,16 +646,16 @@ saveConfigToFile(clientMap);
     });
   };
 
-  if (config.sync_type.mode === 'DHIS2 to ILR') {
-    return dhisToIlr(out, clientMap, end);
-  } else if (config.sync_type.mode === 'ILR to DHIS2') {
+  if (config.getMediatorConf().config.sync_type.mode === 'DHIS2 to ILR') {
+    return dhisToIlr(out, clientMap, clientTmpCfg, end);
+  } else if (config.getMediatorConf().config.sync_type.mode === 'ILR to DHIS2') {
     return ilrToDhis(out, clientMap ,end);
   } else {
-    return dhisToIlr(out, clientMap, function(err) {
+    return dhisToIlr(out, clientMap, clientTmpCfg, function(err) {
       if (err) { return end(err); }
 
       const next = () => ilrToDhis(out, clientMap, end);
-      if (config.sync_type.both_trigger_enabled) {
+      if (config.getMediatorConf().config.sync_type.both_trigger_enabled) {
         return bothTrigger(out, function(err) {
           if (err) { return end(err); }
           return next();
@@ -677,8 +677,8 @@ app.get('/trigger', handler);
 
 let server = null;
 exports.start = function(callback) {
-  server = app.listen(apiConf.server.port, apiConf.server.hostname, function() {
-    logger.info(`[${process.env.NODE_ENV}] ${mediatorConfig.name} running on port ${server.address().address}:${server.address().port}`);
+  server = app.listen(config.getConf().server.port, config.getConf().server.hostname, function() {
+    logger.info(`[${process.env.NODE_ENV}] ${config.getMediatorConf().name} running on port ${server.address().address}:${server.address().port}`);
     if (callback) { return callback(null, server); }
   });
   server.on('error', function(err) {
@@ -688,26 +688,31 @@ exports.start = function(callback) {
 
   if (process.env.NODE_ENV !== 'test') {
     logger.info('Attempting to register mediator with core ...');
-    apiConf.openhim.api.urn = mediatorConfig.urn;
+    config.getConf().openhim.api.urn = config.getMediatorConf().urn;
 
-    return mediatorUtils.registerMediator(apiConf.openhim.api, mediatorConfig, function(err) {
+    return mediatorUtils.registerMediator(config.getConf().openhim.api, config.getMediatorConf(), function(err) {
       if (err) {
         logger.error(err);
         process.exit(1);
       }
+      logger.info('Mediator has been successfully registered');
 
-
-      const configEmitter = mediatorUtils.activateHeartbeat(apiConf.openhim.api);
+      const configEmitter = mediatorUtils.activateHeartbeat(config.getConf().openhim.api);
 
       configEmitter.on('config', function(newConfig) {
+        logger.info('Received updated config from core');
+        config.updateConf(newConfig);
+        return saveConfigToFile();
       });
 
       configEmitter.on('error', err => logger.error(err));
 
-      return mediatorUtils.fetchConfig(apiConf.openhim.api, function(err, newConfig) {
+      return mediatorUtils.fetchConfig(config.getConf().openhim.api, function(err, newConfig) {
         if (err) { return logger.error(err); }
+        logger.info('Received initial config from core');
+        config.updateConf(newConfig);
+        return saveConfigToFile();
       });
-      return logger.info('Mediator has been successfully registered');
 
     });
   }
