@@ -1,29 +1,31 @@
 {
-  "urn": "urn:mediator:openinfoman-dhis2-sync",
+  "urn": "urn:mediator:openinfoman-dhis2-sync-next-gen",
   "version": "3.0.0",
-  "name": "OpenInfoMan-DHIS2 Sync Mediator",
-  "description": "OpenInfoMan-DHIS2 Sync Mediator",
+  "name": "OpenInfoMan-DHIS2 Sync Mediator NextGen",
+  "description": "OpenInfoMan-DHIS2 Sync Mediator for NextGen",
   "endpoints": [
     {
-      "name": "OpenInfoMan-DHIS2 Sync Trigger",
+      "name": "OpenInfoMan-DHIS2 Sync Trigger NextGen",
       "host": "localhost",
-      "port": "5012",
+      "port": "5015",
       "path": "/trigger",
       "type": "http"
     }
   ],
   "defaultChannelConfig": [
     {
-      "name": "OpenInfoMan-DHIS2 Sync",
-      "pollingSchedule" : "0 0 * * *",
+      "name": "OpenInfoMan-DHIS2 Sync NextGen",
+      "pollingSchedule": "0 0 * * *",
       "urlPattern": "^/_infomansync$",
       "type": "polling",
-      "allow": ["internal"],
+      "allow": [
+        "internal"
+      ],
       "routes": [
         {
-          "name": "OpenInfoMan-DHIS2 Sync Trigger",
+          "name": "OpenInfoMan-DHIS2 Sync Trigger NextGen",
           "host": "localhost",
-          "port": "5012",
+          "port": "5015",
           "path": "/trigger",
           "type": "http",
           "primary": "true"
@@ -33,152 +35,151 @@
   ],
   "configDefs": [
     {
-      "param": "dhis-to-ilr",
+      "param": "mapping",
+      "displayName": "Configurations Map",
+      "description": "A map of Source and Target Configurations for Syncing DHIS and ILR",
       "type": "struct",
-      "displayName": "DHIS2 to ILR Synchronization",
-      "description": "Setup for the DHIS2 to ILR Synchronization mode",
+      "array": true,
       "template": [
         {
-          "param": "ilr-url",
+          "param": "clientID",
+          "displayName": "Client ID",
+          "description": "ID of the client that is making the request.",
+          "type": "string"
+        },
+        {
+          "param": "dhis_to_ilr_ilr_url",
           "type": "string",
           "displayName": "ILR URL"
         },
         {
-          "param": "ilr-doc",
+          "param": "dhis_to_ilr_ilr_doc",
           "type": "string",
           "displayName": "ILR Document",
           "description": "Name of CSD document to publish to"
         },
         {
-          "param": "ilr-user",
+          "param": "dhis_to_ilr_ilr_user",
           "type": "string",
           "displayName": "ILR User"
         },
         {
-          "param": "ilr-pass",
+          "param": "dhis_to_ilr_ilr_pass",
           "type": "string",
           "displayName": "ILR Password"
         },
         {
-          "param": "dhis2-url",
+          "param": "dhis_to_ilr_dhis2_url",
           "type": "string",
           "displayName": "DHIS2 URL"
         },
         {
-          "param": "dhis2-user",
+          "param": "dhis_to_ilr_dhis2_user",
           "type": "string",
           "displayName": "DHIS2 Username"
         },
         {
-          "param": "dhis2-pass",
+          "param": "dhis_to_ilr_dhis2_pass",
           "type": "string",
           "displayName": "DHIS2 Password"
         },
         {
-          "param": "dousers",
+          "param": "dhis_to_ilr_dousers",
           "type": "bool",
           "displayName": "DHIS2 Users as Health Workers",
           "description": "Process DHIS2 Users are Health workers"
         },
         {
-          "param": "doservices",
+          "param": "dhis_to_ilr_doservices",
           "type": "bool",
           "displayName": "DHIS2 Data Elements as Services",
           "description": "Process DHIS2 Data Elements as services"
         },
         {
-          "param": "ignorecerts",
+          "param": "dhis_to_ilr_ignorecerts",
           "type": "bool",
           "displayName": "Ignore Certs",
           "description": "Ignore certificate checks"
         },
         {
-          "param": "levels",
+          "param": "dhis_to_ilr_levels",
           "type": "string",
           "displayName": "Levels",
           "description": "Levels of a facility. Example: LEVELS=(3 4 5)"
         },
         {
-          "param": "groupcodes",
+          "param": "dhis_to_ilr_groupcodes",
           "type": "string",
           "displayName": "Group Codes",
           "description": "Groups codes. Example: GROUPS=(COMMUNITY FACILITY COUNTRY)"
         },
         {
-          "param": "reset",
+          "param": "dhis_to_ilr_reset",
           "type": "bool",
           "displayName": "Reset Last Exported Time",
           "description": "Reset the last exported time"
         },
         {
-          "param": "publishfull",
+          "param": "dhis_to_ilr_publishfull",
           "type": "bool",
           "displayName": "Publish Full DHIS2 Metadata",
           "description": "Publish the full DHIS2 metadata (ignore the last exported time)"
         },
         {
-          "param": "debug",
+          "param": "dhis_to_ilr_debug",
           "type": "bool",
           "displayName": "Debug mode"
         },
         {
-          "param": "empty",
+          "param": "dhis_to_ilr_empty",
           "type": "bool",
           "displayName": "Empty CSD Document",
           "description": "Empty the CSD document before publishing"
-        }
-      ]
-    },
-    {
-      "param": "ilr-to-dhis",
-      "type": "struct",
-      "displayName": "ILR to DHIS2 Synchronization",
-      "description": "Setup for the ILR to DHIS2 Synchronization mode",
-      "template": [
+        },
         {
-          "param": "ilr-url",
+          "param": "ilr_to_dhis_ilr_url",
           "type": "string",
           "displayName": "ILR URL"
         },
         {
-          "param": "ilr-doc",
+          "param": "ilr_to_dhis_ilr_doc",
           "type": "string",
           "displayName": "ILR Document",
           "description": "Name of CSD document to publish to"
         },
         {
-          "param": "ilr-user",
+          "param": "ilr_to_dhis_ilr_user",
           "type": "string",
           "displayName": "ILR User"
         },
         {
-          "param": "ilr-pass",
+          "param": "ilr_to_dhis_ilr_pass",
           "type": "string",
           "displayName": "ILR Password"
         },
         {
-          "param": "dhis2-url",
+          "param": "ilr_to_dhis_ilr_dhis2_url",
           "type": "string",
           "displayName": "DHIS2 URL"
         },
         {
-          "param": "dhis2-async",
+          "param": "ilr_to_dhis_ilr_dhis2_async",
           "type": "bool",
           "displayName": "DHIS2 Async Import",
           "description": "Whether to use the DHIS2 async import mechanism to import sites or not."
         },
         {
-          "param": "dhis2-user",
+          "param": "ilr_to_dhis_ilr_dhis2_user",
           "type": "string",
           "displayName": "DHIS2 Username"
         },
         {
-          "param": "dhis2-pass",
+          "param": "ilr_to_dhis_ilr_dhis2_pass",
           "type": "string",
           "displayName": "DHIS2 Password"
         },
         {
-          "param": "dhis2-version",
+          "param": "ilr_to_dhis_ilr_dhis2_version",
           "type": "string",
           "displayName": "DHIS2 version",
           "description": "The version of DHIS to export data for. This is used to call the correct stored query in the ILR for the correct DHIS2 version."
@@ -186,31 +187,37 @@
         {
           "displayName": "Async Response Receiver URL",
           "description": "The URL for the system that receives the response when the async import is done",
-          "param": "dhis2-async-receiver-url",
+          "param": "ilr_to_dhis_ilr_dhis2_async_receiver_url",
           "type": "string"
         },
         {
-          "param": "dhis2-poll-period",
+          "param": "ilr_to_dhis_ilr_dhis2_poll_period",
           "type": "number",
           "displayName": "DHIS2 tasks polling period (ms)",
           "description": "The period on which to poll the DHIS2 API to check whether an async system task is complete."
         },
         {
-          "param": "dhis2-poll-timeout",
+          "param": "ilr_to_dhis_ilr_dhis2_poll_timeout",
           "type": "number",
           "displayName": "DHIS2 task polling timeout (ms)",
           "description": "The timeout after which to stop polling the DHIS2 API and return an error."
         },
         {
-          "param": "dhis2-rebuild-resources",
+          "param": "ilr_to_dhis_ilr_dhis2_rebuild_resources",
           "type": "bool",
           "displayName": "DHIS2 enable resource rebuild",
           "description": "If this is enabled then the DHIS2 resource table will be rebuilt after data is imported into DHIS2. This is run as an async task in DHIS2."
+        },
+        {
+          "param": "instanceID",
+          "displayName": "Instance ID",
+          "description": "ID of the instance of node dhis2 that is making the request.",
+          "type": "string"
         }
       ]
     },
     {
-      "param": "sync-type",
+      "param": "sync_type",
       "type": "struct",
       "displayName": "Synchronization Type Setup",
       "description": "The steps that need to happen when a synchronization is triggered",
@@ -220,16 +227,20 @@
           "type": "option",
           "displayName": "Mode",
           "description": "The type of synchronization to perform: DHIS to ILR, ILR to DHIS or both",
-          "values": ["DHIS2 to ILR", "ILR to DHIS2", "Both"]
+          "values": [
+            "DHIS2 to ILR",
+            "ILR to DHIS2",
+            "Both"
+          ]
         },
         {
-          "param": "both-trigger-enabled",
+          "param": "both_trigger_enabled",
           "type": "bool",
           "displayName": "Both Mode Trigger",
           "description": "If enabled, a target trigger URL will be called in between running the DHIS-to-ILR and ILR-to-DHIS processes"
         },
         {
-          "param": "both-trigger-url",
+          "param": "both_trigger_url",
           "type": "string",
           "displayName": "Both Mode Trigger URL"
         }
@@ -237,39 +248,41 @@
     }
   ],
   "config": {
-    "dhis-to-ilr": {
-      "ilr-url": "http://localhost:8984/CSD",
-      "ilr-doc": "test",
-      "dhis2-url": "https://localhost/dhis2",
-      "dhis2-user": "admin",
-      "dhis2-pass": "district",
-      "dousers": true,
-      "doservices": true,
-      "ignorecerts": true,
-      "levels": "(4 5 6)",
-      "groupcodes": "( )",
-      "reset": false,
-      "publishfull": false,
-      "debug": false,
-      "empty": false
-    },
-    "ilr-to-dhis": {
-      "ilr-url": "http://localhost:8984/CSD",
-      "ilr-doc": "test",
-      "dhis2-url": "https://localhost/dhis2",
-      "dhis2-async": false,
-      "dhis2-user": "admin",
-      "dhis2-pass": "district",
-      "dhis2-version": "v2.19",
-      "dhis2-async-receiver-url": "https://localhost/adxAdapter",
-      "dhis2-poll-period": "1000",
-      "dhis2-poll-timeout": "7200000",
-      "dhis2-rebuild-resources": false
-    },
-    "sync-type": {
+    "mapping": [
+      {
+        "clientID": "adx-adaptor",
+        "dhis_to_ilr_ilr_url": "http://localhost:8984/CSD",
+        "dhis_to_ilr_ilr_doc": "test",
+        "dhis_to_ilr_dhis2_url": "https://localhost/dhis2",
+        "dhis_to_ilr_dhis2_user": "admin",
+        "dhis_to_ilr_dhis2_pass": "district",
+        "dhis_to_ilr_dousers": true,
+        "dhis_to_ilr_doservices": true,
+        "dhis_to_ilr_ignorecerts": true,
+        "dhis_to_ilr_levels": "(4 5 6)",
+        "dhis_to_ilr_groupcodes": "( )",
+        "dhis_to_ilr_reset": false,
+        "dhis_to_ilr_publishfull": false,
+        "dhis_to_ilr_debug": false,
+        "dhis_to_ilr_empty": false,
+        "ilr_to_dhis_ilr_url": "http://localhost:8984/CSD",
+        "ilr_to_dhis_ilr_doc": "test",
+        "ilr_to_dhis_ilr_dhis2_url": "https://localhost/dhis2",
+        "ilr_to_dhis_ilr_dhis2_async": false,
+        "ilr_to_dhis_ilr_dhis2_user": "admin",
+        "ilr_to_dhis_ilr_dhis2_pass": "district",
+        "ilr_to_dhis_ilr_dhis2_version": "v2.19",
+        "ilr_to_dhis_ilr_dhis2_async_receiver_url": "https://localhost/adxAdapter",
+        "ilr_to_dhis_ilr_dhis2_poll_period": "1000",
+        "ilr_to_dhis_ilr_dhis2_poll_timeout": "7200000",
+        "ilr_to_dhis_ilr_dhis2_rebuild_resources": false,
+        "instanceID": "UG"
+      }
+    ],
+    "sync_type": {
       "mode": "DHIS2 to ILR",
-      "both-trigger-enabled": false,
-      "both-trigger-url": "https://localhost:5000/ILR/CSD/pollService/directory/DATIM-OU-TZ/update_cache"
+      "both_trigger_enabled": false,
+      "both_trigger_url": "https://localhost:5000/ILR/CSD/pollService/directory/DATIM-OU-TZ/update_cache"
     }
   }
 }

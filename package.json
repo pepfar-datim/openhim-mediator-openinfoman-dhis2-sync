@@ -1,11 +1,9 @@
 {
-  "name": "openhim-mediator-openinfoman-dhis2-sync",
-  "version": "3.0.0",
-  "description": "OpenInfoMan-DHIS2 Sync Mediator",
+  "name": "openhim-mediator-openinfoman-dhis2-sync-next-gen",
+  "version": "4.0.0",
+  "description": "OpenInfoMan-DHIS2 Sync Mediator for NextGen",
   "scripts": {
-    "prepublish": "grunt build",
-    "test": "nyc grunt test",
-    "start": "node lib/server.js"
+    "start": "node src/server.js"
   },
   "private": true,
   "dependencies": {
@@ -19,17 +17,6 @@
     "winston": "^0.9.0"
   },
   "devDependencies": {
-    "coffee-script": "~1.9.1",
-    "coffeelint": "~1.9.3",
-    "grunt": "^1.0.1",
-    "grunt-coffeelint": "^0.0.16",
-    "grunt-contrib-clean": "^1.0.0",
-    "grunt-contrib-coffee": "^1.0.0",
-    "grunt-contrib-copy": "^1.0.0",
-    "grunt-contrib-watch": "^1.0.0",
-    "grunt-env": "^0.4.4",
-    "grunt-express-server": "^0.5.3",
-    "grunt-mocha-cli": "^2.1.0",
     "nyc": "^8.3.0",
     "rewire": "^2.5.2",
     "should": "~11.1.0",
