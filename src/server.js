@@ -109,7 +109,6 @@ const dhisToIlr = function(out, clientMap, tmpCfg, callback) {
 
 
 const bothTrigger = function(out, callback) {
-  //let config = config.getMediatorConf().config;
   const options = {
     url: config.getMediatorConf().config.sync_type.both_trigger_url,
     cert: nullIfFileNotFound('tls/cert.pem'),
@@ -631,7 +630,6 @@ if (mapping) {
 
     res.set('Content-Type', 'application/json+openhim');
     return res.send({
-      //'x-mediator-urn': config.getMediatorConf().urn,
       'x-mediator-urn': config.getMediatorConf().urn,
       status: err ? 'Failed' : 'Successful',
       response: {
