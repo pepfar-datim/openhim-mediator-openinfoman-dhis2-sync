@@ -50,12 +50,12 @@
         {
           "param": "dhis_to_ilr_ilr_url",
           "type": "string",
-          "displayName": "ILR URL"
+          "displayName": "ILR URL D2I"
         },
         {
           "param": "dhis_to_ilr_ilr_doc",
           "type": "string",
-          "displayName": "ILR Document",
+          "displayName": "ILR Document D2I",
           "description": "Name of CSD document to publish to"
         },
         {
@@ -71,17 +71,17 @@
         {
           "param": "dhis_to_ilr_dhis2_url",
           "type": "string",
-          "displayName": "DHIS2 URL"
+          "displayName": "DHIS2 URL D2I"
         },
         {
           "param": "dhis_to_ilr_dhis2_user",
           "type": "string",
-          "displayName": "DHIS2 Username"
+          "displayName": "DHIS2 Username D2I"
         },
         {
           "param": "dhis_to_ilr_dhis2_pass",
           "type": "string",
-          "displayName": "DHIS2 Password"
+          "displayName": "DHIS2 Password D2I"
         },
         {
           "param": "dhis_to_ilr_dousers",
@@ -139,12 +139,12 @@
         {
           "param": "ilr_to_dhis_ilr_url",
           "type": "string",
-          "displayName": "ILR URL"
+          "displayName": "ILR URL I2D"
         },
         {
           "param": "ilr_to_dhis_ilr_doc",
           "type": "string",
-          "displayName": "ILR Document",
+          "displayName": "ILR Document I2D",
           "description": "Name of CSD document to publish to"
         },
         {
@@ -160,7 +160,7 @@
         {
           "param": "ilr_to_dhis_ilr_dhis2_url",
           "type": "string",
-          "displayName": "DHIS2 URL"
+          "displayName": "DHIS2 URL I2D"
         },
         {
           "param": "ilr_to_dhis_ilr_dhis2_async",
@@ -171,12 +171,12 @@
         {
           "param": "ilr_to_dhis_ilr_dhis2_user",
           "type": "string",
-          "displayName": "DHIS2 Username"
+          "displayName": "DHIS2 Username I2D"
         },
         {
           "param": "ilr_to_dhis_ilr_dhis2_pass",
           "type": "string",
-          "displayName": "DHIS2 Password"
+          "displayName": "DHIS2 Password I2D"
         },
         {
           "param": "ilr_to_dhis_ilr_dhis2_version",
@@ -213,17 +213,9 @@
           "displayName": "Instance ID",
           "description": "ID of the instance of node dhis2 that is making the request.",
           "type": "string"
-        }
-      ]
-    },
-    {
-      "param": "sync_type",
-      "type": "struct",
-      "displayName": "Synchronization Type Setup",
-      "description": "The steps that need to happen when a synchronization is triggered",
-      "template": [
+        },
         {
-          "param": "mode",
+          "param": "sync_type_mode",
           "type": "option",
           "displayName": "Mode",
           "description": "The type of synchronization to perform: DHIS to ILR, ILR to DHIS or both",
@@ -234,13 +226,13 @@
           ]
         },
         {
-          "param": "both_trigger_enabled",
+          "param": "sync_type_both_trigger_enabled",
           "type": "bool",
           "displayName": "Both Mode Trigger",
           "description": "If enabled, a target trigger URL will be called in between running the DHIS-to-ILR and ILR-to-DHIS processes"
         },
         {
-          "param": "both_trigger_url",
+          "param": "sync_type_both_trigger_url",
           "type": "string",
           "displayName": "Both Mode Trigger URL"
         }
@@ -276,13 +268,43 @@
         "ilr_to_dhis_ilr_dhis2_poll_period": "1000",
         "ilr_to_dhis_ilr_dhis2_poll_timeout": "7200000",
         "ilr_to_dhis_ilr_dhis2_rebuild_resources": false,
+        "sync_type_mode": "ILR to DHIS2",
+        "sync_type_both_trigger_enabled": false,
+        "sync_type_both_trigger_url": "https://localhost:5000/ILR/CSD/pollService/directory/DATIM-OU-TZ/update_cache",
         "instanceID": "UG"
+      },
+      {
+        "clientID": "adx-adaptor-ke",
+        "dhis_to_ilr_ilr_url": "http://localhost:8984/CSD",
+        "dhis_to_ilr_ilr_doc": "test",
+        "dhis_to_ilr_dhis2_url": "https://localhost/dhis2",
+        "dhis_to_ilr_dhis2_user": "admin",
+        "dhis_to_ilr_dhis2_pass": "district",
+        "dhis_to_ilr_dousers": true,
+        "dhis_to_ilr_doservices": true,
+        "dhis_to_ilr_ignorecerts": true,
+        "dhis_to_ilr_levels": "(4 5 6)",
+        "dhis_to_ilr_groupcodes": "( )",
+        "dhis_to_ilr_reset": false,
+        "dhis_to_ilr_publishfull": false,
+        "dhis_to_ilr_debug": false,
+        "dhis_to_ilr_empty": false,
+        "ilr_to_dhis_ilr_url": "http://localhost:8984/CSD",
+        "ilr_to_dhis_ilr_doc": "test",
+        "ilr_to_dhis_ilr_dhis2_url": "https://localhost/dhis2",
+        "ilr_to_dhis_ilr_dhis2_async": false,
+        "ilr_to_dhis_ilr_dhis2_user": "admin",
+        "ilr_to_dhis_ilr_dhis2_pass": "district",
+        "ilr_to_dhis_ilr_dhis2_version": "v2.19",
+        "ilr_to_dhis_ilr_dhis2_async_receiver_url": "https://localhost/adxAdapter",
+        "ilr_to_dhis_ilr_dhis2_poll_period": "1000",
+        "ilr_to_dhis_ilr_dhis2_poll_timeout": "7200000",
+        "ilr_to_dhis_ilr_dhis2_rebuild_resources": false,
+        "sync_type_mode": "ILR to DHIS2",
+        "sync_type_both_trigger_enabled": false,
+        "sync_type_both_trigger_url": "https://localhost:5000/ILR/CSD/pollService/directory/DATIM-OU-TZ/update_cache",
+        "instanceID": "KE"
       }
-    ],
-    "sync_type": {
-      "mode": "DHIS2 to ILR",
-      "both_trigger_enabled": false,
-      "both_trigger_url": "https://localhost:5000/ILR/CSD/pollService/directory/DATIM-OU-TZ/update_cache"
-    }
+    ]
   }
 }

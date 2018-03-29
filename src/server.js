@@ -108,9 +108,9 @@ const dhisToIlr = function(out, clientMap, tmpCfg, callback) {
 };
 
 
-const bothTrigger = function(out, callback) {
+const bothTrigger = function(clientMap, out, callback) {
   const options = {
-    url: config.getMediatorConf().config.sync_type.both_trigger_url,
+    url: clientMap.sync_type_both_trigger_url,
     cert: nullIfFileNotFound('tls/cert.pem'),
     key: nullIfFileNotFound('tls/key.pem'),
     ca: nullIfFileNotFound('tls/ca.pem'),
@@ -362,12 +362,12 @@ const postToDhis = function(out, dxfData, clientMap, callback) {
     out.info("No DXF body supplied");
     return callback(new Error("No DXF body supplied"));
   }
-  let query;
+  let query = "";
   if (clientMap.instanceID){
-    query = {instanceid: clientMap.instanceID};
+    query = "&instanceid=" + clientMap.instanceID;
     }
   const options = {
-    url: clientMap.ilr_to_dhis_ilr_dhis2_url + '/api/metadata?preheatCache=false',
+    url: clientMap.ilr_to_dhis_ilr_dhis2_url + '/api/metadata?preheatCache=false' + query,
     body: dxfData,
     method: 'POST',
     auth: {
@@ -377,7 +377,6 @@ const postToDhis = function(out, dxfData, clientMap, callback) {
     cert: nullIfFileNotFound('tls/cert.pem'),
     key: nullIfFileNotFound('tls/key.pem'),
     ca: nullIfFileNotFound('tls/ca.pem'),
-    qs: query,
     timeout: 0,
     headers: { 'content-type': 'application/xml' }
   };
@@ -621,7 +620,7 @@ if (mapping) {
   };
   const out = _out();
 
-  out.info(`Running sync with mode ${config.getMediatorConf().config.sync_type.mode} ...`);
+  out.info(`Running sync with mode ${clientMap.sync_type_mode} ...`);
 
   const end = function(err) {
     if (err && !err.status) {
@@ -644,17 +643,17 @@ if (mapping) {
     });
   };
 
-  if (config.getMediatorConf().config.sync_type.mode === 'DHIS2 to ILR') {
+  if (clientMap.sync_type_mode === 'DHIS2 to ILR') {
     return dhisToIlr(out, clientMap, clientTmpCfg, end);
-  } else if (config.getMediatorConf().config.sync_type.mode === 'ILR to DHIS2') {
+  } else if (clientMap.sync_type_mode === 'ILR to DHIS2') {
     return ilrToDhis(out, clientMap ,end);
   } else {
     return dhisToIlr(out, clientMap, clientTmpCfg, function(err) {
       if (err) { return end(err); }
 
       const next = () => ilrToDhis(out, clientMap, end);
-      if (config.getMediatorConf().config.sync_type.both_trigger_enabled) {
-        return bothTrigger(out, function(err) {
+      if (clientMap.sync_type_both_trigger_enabled) {
+        return bothTrigger(clientMap, out, function(err) {
           if (err) { return end(err); }
           return next();
         });
