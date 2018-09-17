@@ -386,8 +386,8 @@ const postToDhis = function(out, dxfData, clientMap, callback) {
 
   const beforeTimestamp = new Date();
   return request.post(options, function(err, res, body) {
-    var resBody = JSON.parse(body);
-    var processId = resBody['response']['id'];
+    const resBody = JSON.parse(body);
+    const processId = resBody['response']['id'];
 
     if (err) {
       out.error(`Post to DHIS2 failed: ${err}`);
