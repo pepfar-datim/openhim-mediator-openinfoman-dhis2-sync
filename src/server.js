@@ -378,7 +378,7 @@ const postToDhis = function(out, dxfData, clientMap, callback) {
     key: nullIfFileNotFound('tls/key.pem'),
     ca: nullIfFileNotFound('tls/ca.pem'),
     timeout: 0,
-    headers: { 'content-type': 'application/xml' }
+    headers: { 'content-type': 'application/xml', 'accept': 'application/json' }
   };
   if (clientMap.ilr_to_dhis_ilr_dhis2_async) {
     options.qs = {async: true};
@@ -386,6 +386,9 @@ const postToDhis = function(out, dxfData, clientMap, callback) {
 
   const beforeTimestamp = new Date();
   return request.post(options, function(err, res, body) {
+    const resBody = JSON.parse(body);
+    const processId = resBody['response']['id'];
+
     if (err) {
       out.error(`Post to DHIS2 failed: ${err}`);
       return callback(new Error(`Post to DHIS2 failed: ${err}`));
@@ -414,7 +417,7 @@ const postToDhis = function(out, dxfData, clientMap, callback) {
         const period = clientMap.ilr_to_dhis_ilr_dhis2_poll_period;
         const timeout = clientMap.ilr_to_dhis_ilr_dhis2_poll_timeout;
         // send out async polling request
-        return pollTask(out, 'sites import', 'METADATA_IMPORT', period, timeout, clientMap, function(err) {
+        return pollTask(out, 'sites import', 'METADATA_IMPORT/' + processId, period, timeout, clientMap, function(err) {
           if (err) { return callback(err); }
 
           return sendAsyncDhisImportResponseToReceiver(out, res, clientMap, callback);
@@ -735,3 +738,4 @@ if (process.env.NODE_ENV === 'test') {
   exports.getDHISDataStore = getDHISDataStore;
   exports.fetchLastImportTs = fetchLastImportTs;
 }
+
