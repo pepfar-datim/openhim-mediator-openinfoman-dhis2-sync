@@ -5,10 +5,10 @@ CONFIG=publish_to_ilr.cfg
 
 ########################################################################
 # Dependencies:
-#  sudo apt-get install libxml2-utils jshon
+#  sudo apt-get install libxml2-utils 
+# 
 #
-#
-#    DO NOT EDIT BELOW HERE
+#    DO NOT EDIT BELOW HERE    
 #
 # set some external programs
 ########################################################################
@@ -18,9 +18,8 @@ CURL=/usr/bin/curl
 PRINTF=/usr/bin/printf
 XMLLINT=/usr/bin/xmllint
 GREP=/bin/grep
-JSHON=/usr/bin/jshon
 #########################################################################
-#    Actual work is below
+#    Actual work is below      
 #########################################################################
 
 #help test
@@ -79,12 +78,12 @@ FULL=false
 EMPTY=false
 
 OPTS="edhrfc:"
-OPTIND=1
+OPTIND=1 
 while getopts  "$OPTS" OPT; do
     case "$OPT" in
         c)  CONFIG=$OPTARG
 	    ;;
-	f)  FULL=true
+	f)  FULL=true	    
 	    ;;
 	d)  set -x
 	    ;;
@@ -93,7 +92,7 @@ while getopts  "$OPTS" OPT; do
     esac
 done
 
-OPTIND=1
+OPTIND=1 
 while getopts "$OPTS" OPT; do
     case "$OPT" in
 	h)  show_help
@@ -134,29 +133,24 @@ elif [ "$NOTHASKEY" = "1" ]; then
     LASTUPDATE=false
 else
     echo "Getting last export time from $DHIS2_URL"
-    LASTUPDATE=`$CURL -sv  $DHIS2_AUTH -H "$DHIS2_AUTH_HEAD"  -H 'Accept: application/json' $DHIS2_URL/api/dataStore/CSD-Loader-Last-Export/$ILR_DOC | $JSHON -e value`
-    #strip any beginning / ending quotes
-    LASTUPDATE="${LASTUPDATE%\"}"
-    LASTUPDATE="${LASTUPDATE#\"}"
-    LASTUPDATE="${LASTUPDATE%\'}"
-    LASTUPDATE="${LASTUPDATE#\'}"
+    LASTUPDATE=`$CURL -sv  $DHIS2_AUTH -H "$DHIS2_AUTH_HEAD"  -H 'Accept: application/json' $DHIS2_URL/api/dataStore/CSD-Loader-Last-Export/$ILR_DOC | sed -E 's/^.+["\x27]value["\x27] *: *["\x27]([^"\x27]+)["\x27].+$/\1/gim'`
     echo "Last export performed succesfully at $LASTUPDATE"
     #convert to yyyy-mm-dd format (dropping time as it is ignored by DHIS2)
     LASTUPDATE=$(date --date="$LASTUPDATE" +%F)
 fi
 
 
-if [ "$DOUSERS" = true ]; then
+if [ "$DOSUERS" = true ]; then
     UFLAG="true"
     UVAL="1"
-else
+else 
     UFLAG="false"
     UVAL="0"
 fi
 if [ "$DOSERVICES" = true ]; then
     SFLAG="true"
     SVAL=1
-else
+else 
     SFLAG="false"
     SVAL="0"
 fi
@@ -198,11 +192,11 @@ fi
 
 #extract data from DHIS2
 echo "Extracting DXF from DHIS2 at $DHIS2_URL"
-DXF=`$CURL -sv $DHIS2_AUTH -H "$DHIS2_AUTH_HEAD"  -H 'Accept: application/xml' "$DHIS2_URL/api/24/metadata?${VAR:1}"  `
-EXPORTED=`echo $DXF | $XMLLINT  --xpath 'string((/*[local-name()="metaData"])[1]/@created)' -`
+DXF=`$CURL -sv $DHIS2_AUTH -H "$DHIS2_AUTH_HEAD"  -H 'Accept: application/xml' "$DHIS2_URL/api/metadata?${VAR:1}"  `
+EXPORTED=`echo "$DXF" | $XMLLINT  --xpath 'string((/*[local-name()="metaData"])[1]/@created)' -`
 
 
-DXF=`echo $DXF | $XMLLINT --c14n -`
+DXF=`echo "$DXF" | $XMLLINT --c14n -`
 
 
 #Create Care Services Request Parameteres
@@ -220,7 +214,7 @@ CSR="<csd:requestParams xmlns:csd='urn:ihe:iti:csd:2013'>
 
 #publish to ILR
 echo "Publishing to $ILR_DOC on $ILR_URL"
-echo $CSR | $CURL -sv --data-binary @- -X POST -H 'Content-Type: text/xml' $ILR_AUTH -H "$ILR_AUTH_HEAD" $ILR_URL/csr/$ILR_DOC/careServicesRequest/update/urn:dhis.org:extract_from_dxf:v2.19
+echo "$CSR" | $CURL -sv --data-binary @- -X POST -H 'Content-Type: text/xml' $ILR_AUTH -H "$ILR_AUTH_HEAD" $ILR_URL/csr/$ILR_DOC/careServicesRequest/update/urn:dhis.org:extract_from_dxf:v2.19
 
 
 #update last exported

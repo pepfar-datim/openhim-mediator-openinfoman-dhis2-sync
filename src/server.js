@@ -47,7 +47,7 @@ const saveConfigToFile = function() {
   mapping.forEach((map) => {
     const cfgStr = cfg(map);
     logger.debug(`Config to save:\n${cfgStr}`);
-    const tmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync-' + map.clientID + '.cfg';
+   const tmpCfg = `${appRoot}` + '/openhim-mediator-openinfoman-dhis2-sync-' + map.clientID + '.cfg';
      fs.writeFile(tmpCfg, cfgStr, function(err) {
       if (err) {
         logger.error(err);
@@ -580,7 +580,7 @@ const handler = function(req, res) {
   const openhimTransactionID = req.headers['x-openhim-transactionid'];
 
   const clientId = req.headers['x-openhim-clientid'];
-let clientTmpCfg = '/tmp/openhim-mediator-openinfoman-dhis2-sync-' + clientId + '.cfg';
+let clientTmpCfg = `${appRoot}` + '/openhim-mediator-openinfoman-dhis2-sync-' + clientId + '.cfg';
 const mapping = config.getConf().mapping;
 let clientMap = {};
 if (mapping) {
