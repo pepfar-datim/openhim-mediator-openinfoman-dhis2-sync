@@ -464,10 +464,15 @@ var pollTask = function(out, orchName, task, period, timeout, clientMap, callbac
         return callback(new Error(`Incorrect status code received, ${res.statusCode}`));
       }
       pollNum++;
-      if (((tasks[0] != null ? tasks[0].completed : undefined) == null)) {
+      let i=0;
+      for(i; i< tasks.length; i++){
+      if (((tasks[i] != null ? tasks[i].completed : undefined) == null)) {
         return callback(new Error('No tasks returned or bad tasks response received'));
       }
-      if ((tasks[0] != null ? tasks[0].completed : undefined) === true) {
+    }
+      i=0;
+      for(i; i< tasks.length; i++){
+      if ((tasks[i] != null ? tasks[i].completed : undefined) === true) {
         clearInterval(interval);
 
         out.pushOrchestration({
@@ -487,6 +492,7 @@ var pollTask = function(out, orchName, task, period, timeout, clientMap, callbac
         });
         return callback();
       }
+    }
       if ((pollNum * period) >= timeout) {
         clearInterval(interval);
         return callback(new Error(`Polled tasks endpoint ${pollNum} time and still not completed, timing out...`));
